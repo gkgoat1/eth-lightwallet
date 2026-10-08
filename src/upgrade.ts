@@ -1,13 +1,34 @@
+// crypto-js retained ONLY for the v1 AES-CBC decrypt (EVP_BytesToKey quirk;
+// reimplementing it on @noble is security-sensitive and not worth owning for a
+// legacy-upgrade-only path — plan §3e). PBKDF2 + keyHash moved to @noble
+// because crypto-js@4 changed PBKDF2 WordArray-salt handling.
 import CryptoJS from 'crypto-js';
+import { pbkdf2 } from '@noble/hashes/pbkdf2.js';
+import { sha1 } from '@noble/hashes/legacy.js';
+import { keccak_512 } from '@noble/hashes/sha3.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import { KeyStore } from './keystore';
 
 const HD_PATH_STRING = "m/0'/0'/0'";
 
-function legacyGenerateEncKey(password: string, salt: string): string {
-  return CryptoJS.PBKDF2(password, salt, {
-    keySize: 512 / 32,
-    iterations: 150,
-  }).toString();
+// CryptoJS WordArray {words, sigBytes} (big-endian) -> bytes.
+function wordArrayToBytes(wa: { words: number[]; sigBytes: number }): Uint8Array {
+  const out = new Uint8Array(wa.sigBytes);
+  for (let i = 0; i < wa.sigBytes; i++) {
+    out[i] = (wa.words[i >>> 2] >>> (24 - (i % 4) * 8)) & 0xff;
+  }
+  return out;
+}
+
+// v1 KDF: PBKDF2-HMAC-SHA1, 150 iters, 512-bit key, returned as hex string.
+function legacyGenerateEncKey(password: string, salt: any): string {
+  const saltBytes = typeof salt === 'string' ? utf8ToBytes(salt) : wordArrayToBytes(salt);
+  return bytesToHex(pbkdf2(sha1, utf8ToBytes(password), saltBytes, { c: 150, dkLen: 64 }));
+}
+
+// v1 keyHash: keccak-512 of the derived-key hex STRING.
+function legacyKeyHash(derivedKeyHex: string): string {
+  return bytesToHex(keccak_512(utf8ToBytes(derivedKeyHex)));
 }
 
 function legacyDecryptString(encryptedStr: any, password: string): string {
@@ -21,7 +42,7 @@ function upgradeVersion1(oldKS: any, password: string, callback: (err: unknown, 
   const { salt, keyHash, encSeed, hdIndex } = oldKS;
   const derivedKey = legacyGenerateEncKey(password, salt);
 
-  const hash = CryptoJS.SHA3(derivedKey).toString();
+  const hash = legacyKeyHash(derivedKey);
 
   if (keyHash !== hash) {
     callback(new Error('Keystore Upgrade: Invalid Password!'));

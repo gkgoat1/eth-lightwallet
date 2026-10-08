@@ -26,6 +26,14 @@ export default defineConfig({
       },
       {
         test: {
+          name: 'comparison',
+          include: ['test/comparison/**/*.test.ts'],
+          testTimeout: 20000,
+          hookTimeout: 60000,
+        },
+      },
+      {
+        test: {
           name: 'e2e',
           include: ['test/e2e/**/*.test.ts'],
           testTimeout: 60000,
