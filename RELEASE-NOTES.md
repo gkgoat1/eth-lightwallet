@@ -1,6 +1,6 @@
 # Release Notes #
 
-## Version 5.0.0 - Unreleased ##
+## Version 5.0.0 - 2026-10-08 ##
 
 TypeScript rewrite with modern audited dependencies, ESM-first dual build.
 **Behavior preserved** — verified against the frozen 4.0.0 code via golden

@@ -1,6 +1,6 @@
 {
   "name": "@gkgo/eth-lightwallet",
-  "version": "5.0.0-alpha.0",
+  "version": "5.0.0",
   "description": "A lightweight ethereum javascript wallet.",
   "type": "module",
   "main": "./dist/index.cjs",
