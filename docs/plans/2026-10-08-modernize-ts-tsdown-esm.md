@@ -364,6 +364,43 @@ Order chosen so each step is independently verifiable:
 **Exit:** `legacy/` deps remain only as devDependencies for comparison tests;
 runtime tree is the modern set; every suite green on all CI Node versions.
 
+### Phase 3 results (DONE 2026-10-08)
+
+All five module swaps landed, each golden+comparison verified:
+- **3a encryption:** Buffer → @noble/hashes hex; tweetnacl kept.
+- **3b txutils:** web3/ethereumjs-tx@1/ethereumjs-util@6/rlp/crypto-js dropped →
+  @ethereumjs/tx@10 + @ethereumjs/rlp + noble keccak + viem ABI. **Key pin:**
+  unsigned legacy txs serialize v=0x1c, r/s empty (@ethereumjs/tx@10 defaults
+  differ; createTx overrides).
+- **3c signing:** signTx via @ethereumjs/tx@10 (byte-exact w/ rawSignedTx
+  goldens, chainId-0 common). signMsg/concatSig/recoverAddress via **viem** —
+  reproduces the legacy message-sig bytes EXACTLY (hardcoded expectedConcatSig
+  golden passes UNCHANGED; no behavioral delta needed). Found: @noble/curves@2.4.0
+  standalone has a lowS recovery-bit inconsistency (sig verifies, recovers wrong
+  addr); viem's pinned noble path is correct. signMsg/recoverAddress now async.
+  Gotcha: @ethereumjs/util@10 bytesToHex is 0x-prefixed, noble's isn't —
+  standardized on noble.
+- **3d keystore:** bitcore-lib/bitcore-mnemonic/elliptic/crypto-js/scrypt-async
+  dropped → @scure/bip39+bip32 (xpriv format preserved via privateExtendedKey),
+  noble scrypt (logN=14/r=8/p=1/dkLen=32, byte-exact), noble keccak/sha256,
+  noble secp256k1. RNG → CSPRNG (plan §4.3). addrprivkey100 + KDF goldens pass.
+- **3e upgrade:** v1 KDF/hash → noble (PBKDF2-HMAC-SHA1 150it byte-exact;
+  keyHash = keccak_512 of dkHex). crypto-js kept @^4 for v1 AES-CBC only —
+  crypto-js@4 changed PBKDF2 WordArray-salt handling, so noble does the KDF
+  (resolves §3e open question: hybrid, noble KDF + crypto-js AES).
+
+**Cleanup:** legacy deps → devDependencies (oracle only); dropped
+micro-eth-signer + @noble/ciphers (unused); deleted src/legacy-deps.d.ts (real
+types). **Runtime deps: 12, npm audit --omit=dev: 0 vulns** (baseline 31).
+
+**Comparison suite** (`test/comparison/legacy-vs-src.test.ts`, 8 tests):
+legacy/ vs src/ equivalence live. **Oracle limitation documented:** legacy
+v1-upgrade breaks under crypto-js@4 (PBKDF2 drift) — env artifact, not a src
+regression; src v1-upgrade verified byte-exact vs fixtures.
+
+**160/160 vitest (unit+golden+comparison), 144/144→143+1-env-fail legacy mocha,
+SMOKE PASS.**
+
 ### Phase 4 — Anvil e2e (1 day)
 
 - [ ] `test/e2e/` per §5.3; contract bytecode fixture with provenance comment.
@@ -423,6 +460,7 @@ contract address prediction matches on-chain reality.
 | 2026-10-08 | Goldens generated from legacy/ (vault, kdf pin, 5 addrs, 3 signed legacy txs, v1/v2 upgrades) | `test/golden/generated/vault-4.0.0.json`, cross-checked vs existing fixtures |
 | 2026-10-08 | Phase 1: vitest 5 + TS 7 + tsdown 0.23 harness; 4 suites ported | 144/144 vs `legacy/`; tsc clean; CI matrix Node 18–24 |
 | 2026-10-08 | Phase 2: src/ TS straight-port (legacy deps), tsdown dual build, exports map w/ per-condition types, golden suite, smoke-pack | 151/151 (unit+golden) vs src; CJS+ESM+types verified on packed tarball; v5.0.0-alpha.0 |
+| 2026-10-08 | Phase 3a–e: all dep swaps (encryption/txutils/signing/keystore/upgrade), comparison suite, dep cleanup | **160/160** (unit+golden+comparison); runtime audit 0 vulns (was 31); signMsg byte-exact via viem; a1d16c9 |
 
 ## 10. Consumer contract — `eth-hot-wallet` (link session t-9be9, 2026-10-08)
 
