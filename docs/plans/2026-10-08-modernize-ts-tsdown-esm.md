@@ -449,7 +449,9 @@ regression; src v1-upgrade is verified byte-exact by golden+unit tests).
       package.json updated + `publishConfig.access=public`; smoke test packs
       and verifies the scoped name. Publishing itself needs `npm login` as the
       scope owner — user's step.
-- [ ] Decide fate of `legacy/` (recommend: keep through 5.x).
+- [x] **`legacy/` retained through 5.x** (decided: it is the frozen comparison
+      oracle; cheap to keep, invaluable for regression-hunting until 5.0.0 is
+      proven in the app — recommended by this session, voted yes by t-9be9).
 - [x] `npm pack` + smoke tests (done each phase via `npm run smoke`).
 
 **Status:** library is functionally complete + consumer-validated (t-9be9's
@@ -476,7 +478,9 @@ golden gate 20/20 green against a1d16c9). Awaiting publish decision.
 4. ~~Publish name/scope~~ → **DECIDED: `@gkgo/eth-lightwallet`** (scoped,
    public access). Name is available on npm (404/unpublished); publishing
    requires owning the `@gkgo` npm scope (user's step).
-5. Keep `legacy/` in-repo for how long (5.x cycle, or drop at 5.0.0)?
+5. ~~Keep `legacy/` in-repo for how long~~ → **DECIDED: keep through the 5.x
+   cycle** (it's the frozen comparison oracle; revisit removal once 5.0.0 is
+   proven in eth-hot-wallet).
 
 ## 11. Progress log
 
