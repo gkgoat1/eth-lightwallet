@@ -29,6 +29,10 @@ jobs:
       # Ported vitest suites against the frozen legacy/ oracle.
       - run: npm test
 
-      # Original mocha harness against lib/ (regression floor until Phase 2
-      # removes the old sources).
+      # Original mocha harness against lib/ (regression floor until the old
+      # sources are removed in a later phase).
       - run: npm run test:legacy-harness
+
+      # Build + packed-tarball smoke test (CJS require, ESM import, types
+      # under node16 + bundler, golden address pin).
+      - run: npm run smoke

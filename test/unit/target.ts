@@ -15,11 +15,33 @@ if (target !== 'legacy' && target !== 'src') {
   throw new Error(`LWT_TARGET must be "legacy" or "src", got "${target}"`);
 }
 
+// src is real TS resolved by vitest's loader; legacy is frozen CJS and needs
+// createRequire (ESM can't require CJS without it here).
+import * as srcKeystore from '../../src/keystore';
+import * as srcUpgrade from '../../src/upgrade';
+import * as srcSigning from '../../src/signing';
+import * as srcTxutils from '../../src/txutils';
+import * as srcEncryption from '../../src/encryption';
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function load(name: string): any {
-  return target === 'legacy'
-    ? require(`../../legacy/${name}.js`)
-    : require(`../../src/${name}.js`); // Phase 2: src exists then
+  if (target === 'legacy') {
+    return require(`../../legacy/${name}.js`);
+  }
+  switch (name) {
+    case 'keystore':
+      return (srcKeystore as any).KeyStore;
+    case 'upgrade':
+      return srcUpgrade;
+    case 'signing':
+      return srcSigning;
+    case 'txutils':
+      return srcTxutils;
+    case 'encryption':
+      return srcEncryption;
+    default:
+      throw new Error(`unknown module ${name}`);
+  }
 }
 
 export const TARGET = target;

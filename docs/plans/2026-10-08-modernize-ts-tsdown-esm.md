@@ -301,17 +301,41 @@ A tiny script (run in CI after `npm pack`):
 **Exit:** met — new harness green locally on old code; CI file committed
 (verified on push).
 
-### Phase 2 — TS + tsdown scaffold, zero dependency swaps (1 day)
+### Phase 2 — TS + tsdown scaffold, zero dependency swaps (1 day) — **DONE 2026-10-08**
 
-- [ ] `src/*.ts` as a **straight port** of `lib/*.js` (same deps, `any` where
-      needed, `declare module` shims for untyped old packages).
-- [ ] tsdown dual build + exports map; smoke tests pass; `files: ["dist"]`.
-- [ ] Point `test/unit` at `src/`; all suites green.
-- [ ] Write `test/golden/` runners (fixture-driven, explicit assertions on
-      every pinned value).
+- [x] `src/*.ts` straight port of `lib/*.js` (same legacy deps; minimal
+      ambient shims in `src/legacy-deps.d.ts`, typed blobs
+      `EncryptedStringBlob`/`EncryptedKeyBlob` where free). `KeyStore` is now
+      a class (prototype semantics preserved, incl. instance-overwritable
+      `passwordProvider`). Behavior-verified 1:1.
+- [x] tsdown dual build: `dist/index.js` (ESM) + `dist/index.cjs` +
+      `index.d.ts`/`index.d.cts`; `outputOptions.exports='named'` hoists
+      default-export props so `require('eth-lightwallet').keystore` works.
+- [x] package.json: `"type":"module"`, exports map with **per-condition
+      types** (`import`→index.d.ts, `require`→index.d.cts — a single
+      top-level `types` breaks CJS consumers under node16, found by smoke),
+      `files:["dist"]`, version bumped to `5.0.0-alpha.0`.
+- [x] `LWT_TARGET` default flipped to `src`; **144/144 unit + 7/7 golden
+      green against src**. Original mocha harness kept green via
+      `test/package.json`+`lib/package.json` `{"type":"commonjs"}` markers.
+- [x] `test/golden/vault-4.0.0.test.ts` — pins scrypt key, vault round-trip,
+      addresses+privkeys, 3 signed legacy txs, v1/v2 upgrade outputs.
+- [x] `scripts/smoke-pack.cjs` — packs the tarball and verifies CJS require,
+      ESM named+default, functional golden pin, and type resolution under
+      `node16`+`bundler` for both `.mts` and `.cts` consumers. Wired as
+      `npm run smoke` + CI step.
 
-**Exit:** dual ESM/CJS package building from TS, behavior identical (still on
-old deps), golden suite green.
+**Exit:** met — dual ESM/CJS package building from TS, behavior identical
+(still on legacy deps), golden suite green, packed artifact smoke-tested.
+
+**Notable gotchas hit (recorded for Phase 3+):**
+- `verbatimModuleSyntax` silently erases `import * as X` namespaces used only
+  in value-via-property positions → use named imports in src (fixed).
+- Node CJS-named-export detection misses `elliptic`'s `ec` → default import +
+  property access in ESM source.
+- Node ESM resolves `web3/lib/solidity/coder` only with the explicit `.js`.
+- `"type":"module"` flips `test/*.js`/`lib/*.js` to ESM → per-dir
+  `{"type":"commonjs"}` markers keep the legacy mocha harness alive.
 
 ### Phase 3 — Dependency swap, module by module (2–3 days)
 
@@ -398,6 +422,7 @@ contract address prediction matches on-chain reality.
 | 2026-10-08 | Contract exchange with t-9be9 (eth-hot-wallet) | 4 corrections accepted; strict hdPathString confirmed; goldens to be shared bidirectionally |
 | 2026-10-08 | Goldens generated from legacy/ (vault, kdf pin, 5 addrs, 3 signed legacy txs, v1/v2 upgrades) | `test/golden/generated/vault-4.0.0.json`, cross-checked vs existing fixtures |
 | 2026-10-08 | Phase 1: vitest 5 + TS 7 + tsdown 0.23 harness; 4 suites ported | 144/144 vs `legacy/`; tsc clean; CI matrix Node 18–24 |
+| 2026-10-08 | Phase 2: src/ TS straight-port (legacy deps), tsdown dual build, exports map w/ per-condition types, golden suite, smoke-pack | 151/151 (unit+golden) vs src; CJS+ESM+types verified on packed tarball; v5.0.0-alpha.0 |
 
 ## 10. Consumer contract — `eth-hot-wallet` (link session t-9be9, 2026-10-08)
 

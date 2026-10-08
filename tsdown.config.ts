@@ -10,4 +10,10 @@ export default defineConfig({
   outExtensions({ format }) {
     return { js: format === 'cjs' ? '.cjs' : '.js' };
   },
+  // Hoist default-export props onto module.exports so
+  // require('eth-lightwallet').keystore works like 4.0.0 (also silences the
+  // MIXED_EXPORTS warning).
+  outputOptions: {
+    exports: 'named',
+  },
 });

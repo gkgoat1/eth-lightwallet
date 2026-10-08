@@ -1,8 +1,21 @@
 {
   "name": "eth-lightwallet",
-  "version": "4.0.0",
+  "version": "5.0.0-alpha.0",
   "description": "A lightweight ethereum javascript wallet.",
-  "main": "index.js",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+      "require": { "types": "./dist/index.d.cts", "default": "./dist/index.cjs" }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/ConsenSys/eth-lightwallet.git"
@@ -10,10 +23,11 @@
   "scripts": {
     "build": "tsdown",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --project unit",
+    "test": "vitest run --project unit --project golden",
     "test:legacy-harness": "./node_modules/.bin/mocha --reporter dot",
     "coverage": "vitest run --coverage",
-    "gen:goldens": "node scripts/generate-goldens.js"
+    "gen:goldens": "node scripts/generate-goldens.js",
+    "smoke": "npm run build && node scripts/smoke-pack.cjs"
   },
   "keywords": [
     "ethereum",

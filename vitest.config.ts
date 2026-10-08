@@ -5,13 +5,21 @@ export default defineConfig({
     // Phase 1 runs the ported suites against `legacy/` to prove the port is
     // faithful. Phase 2 flips `LWT_TARGET` to `src`.
     env: {
-      LWT_TARGET: process.env.LWT_TARGET ?? 'legacy',
+      LWT_TARGET: process.env.LWT_TARGET ?? 'src',
     },
     projects: [
       {
         test: {
           name: 'unit',
           include: ['test/unit/**/*.test.ts'],
+          testTimeout: 20000,
+          hookTimeout: 60000,
+        },
+      },
+      {
+        test: {
+          name: 'golden',
+          include: ['test/golden/**/*.test.ts'],
           testTimeout: 20000,
           hookTimeout: 60000,
         },
