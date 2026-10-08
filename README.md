@@ -70,17 +70,13 @@ Please note that LightWallet has not been through a comprehensive security revie
 npm install eth-lightwallet
 ```
 
-The `eth-lightwallet` package contains `dist/lightwallet.min.js` that can be included in an HTML page:
+As of 5.0.0 there is no pre-built browser bundle. Consume the ESM build
+(`dist/index.js`) through your own bundler (vite/rollup/esbuild/webpack):
 
-```html
-<html>
-  <body>
-    <script src="lightwallet.min.js"></script>
-  </body>
-</html>
+```js
+import lightwallet from 'eth-lightwallet';
+// lightwallet.keystore, lightwallet.txutils, lightwallet.signing, ...
 ```
-
-The file `lightwallet.min.js` exposes the global object `lightwallet` to the browser which has the two main modules `lightwallet.keystore` and `lightwallet.txutils`.
 
 Sample recommended usage with hooked web3 provider:
 

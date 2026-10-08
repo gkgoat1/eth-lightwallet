@@ -427,21 +427,30 @@ Note: legacy mocha harness is 143/144 — the 1 failure is the documented
 crypto-js@4 PBKDF2 env-drift in the frozen oracle's v1-upgrade path (NOT a src
 regression; src v1-upgrade is verified byte-exact by golden+unit tests).
 
-### Phase 5 — Hardening & release (1 day)
+### Phase 5 — Hardening & release (1 day) — **MOSTLY DONE 2026-10-08**
 
-- [ ] Replace `any` with real public types (`CreateVaultOptions`,
-      `SerializedKeystore`, `TxParams`, `EncryptedMessage`, …). Export types
-      from `index.ts`.
-- [ ] README: ESM/CJS import examples, migration notes (dropped browser
-      bundle, Node >= 18, dropped `hooked-web3-provider` coupling notes),
-      updated security section.
-- [ ] RELEASE-NOTES 5.0.0: dep changes, audit delta, behavioral-compat
-      statement, contingency status of comparison suite.
-- [ ] `example/` updated to ESM build.
-- [ ] Decide fate of `legacy/` (keep for one more minor cycle — recommended —
-      then drop with its devDeps).
-- [ ] `npm pack` dry-run, smoke tests, publish as `5.0.0` (consider
-      `5.0.0-beta.0` first).
+- [x] Public TS types: `src/types.ts` (`CreateVaultOptions`,
+      `SerializedKeystore`, `TxParams`, `AsymEncryptedMessage`,
+      `MultiEncryptedMessage`, `Callback`) exported from `index.ts`;
+      `createVault`/`signTransaction` typed. Verified in `dist/index.d.ts`.
+- [x] README: "Migrating to 5.0.0" section (ESM/CJS imports, async
+      signMsg/recoverAddress, removed browser bundle, Node>=18) + preserved-
+      behavior list; stale browserify-bundle Get Started block updated;
+      security section notes the 31→0 audit delta.
+- [x] RELEASE-NOTES 5.0.0: breaking changes, verified-preservation list, dep
+      swap summary, audit delta, build notes, comparison-oracle status.
+- [x] `example/`: marked outdated (references removed bundle + web3@0.20);
+      `example/README.md` points to README migration + test suites. Full
+      example rewrite deferred (out of scope, non-blocking).
+- [x] **Bonus:** restored the full comparison oracle — vendored crypto-js@3.1.8
+      for `legacy/` (gitignored), so the frozen 4.0.0 oracle is 144/144 green
+      again (incl. v1-upgrade). Mocha harness redirected lib/ → legacy/.
+- [ ] Decide fate of `legacy/` (recommend: keep through 5.x).
+- [ ] **Publish decision pending** (npm name/scope, version tag) — see §8 Q4.
+- [x] `npm pack` + smoke tests (done each phase via `npm run smoke`).
+
+**Status:** library is functionally complete + consumer-validated (t-9be9's
+golden gate 20/20 green against a1d16c9). Awaiting publish decision.
 
 ## 7. Risks & mitigations
 
