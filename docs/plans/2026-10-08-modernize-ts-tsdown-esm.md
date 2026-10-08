@@ -401,13 +401,31 @@ regression; src v1-upgrade verified byte-exact vs fixtures.
 **160/160 vitest (unit+golden+comparison), 144/144→143+1-env-fail legacy mocha,
 SMOKE PASS.**
 
-### Phase 4 — Anvil e2e (1 day)
+### Phase 4 — Anvil e2e (1 day) — **DONE 2026-10-08**
 
-- [ ] `test/e2e/` per §5.3; contract bytecode fixture with provenance comment.
-- [ ] CI job with pinned foundry/anvil version.
+- [x] `@viem/anvil` helper (`test/e2e/anvil-setup.ts`): explicit distinct port
+      (port-0 unsupported), loopback only, RPC-readiness wait. Hard fail if the
+      anvil binary is absent (per §3.2 — never silent skip).
+- [x] Contract fixture: `test/e2e/contracts/SimpleStorage.{sol,json}`
+      (set/get, compiled forge 1.8.3 / solc 0.8.30, provenance recorded).
+- [x] 5 e2e tests, all green on Anvil:
+      1. legacy value transfer (fund→valueTx→signTx→mine; balance + gas-cost delta exact)
+      2. contract deploy — **createdContractAddress == receipt.contractAddress**
+      3. contract call — functionTx `set(42)`, eth_call `get()` == 42
+      4. keystore.signTransaction full flow (web3-style `gas` param, injected passwordProvider)
+      5. signMsgHash + concatSig → recovers to signer (viem + lib agree)
+- [x] Recipients use 0x1000…-style addresses (t-9be9's PrecompileOOG tip —
+      0x01–0x09 OOG at 21000 gas).
+- [x] CI: `foundry-rs/foundry-toolchain@v1` step + `npm run test:e2e`.
+      `test:e2e` and `test:all` scripts added.
 
-**Exit:** raw transactions produced and signed by the new stack mine on Anvil;
-contract address prediction matches on-chain reality.
+**Exit:** met — raw txs produced/signed by the modernized stack mine on Anvil;
+contract-address prediction matches on-chain reality; signature recovery
+round-trips. **Full suite: 165/165 (9 files) + SMOKE PASS.**
+
+Note: legacy mocha harness is 143/144 — the 1 failure is the documented
+crypto-js@4 PBKDF2 env-drift in the frozen oracle's v1-upgrade path (NOT a src
+regression; src v1-upgrade is verified byte-exact by golden+unit tests).
 
 ### Phase 5 — Hardening & release (1 day)
 
@@ -461,6 +479,7 @@ contract address prediction matches on-chain reality.
 | 2026-10-08 | Phase 1: vitest 5 + TS 7 + tsdown 0.23 harness; 4 suites ported | 144/144 vs `legacy/`; tsc clean; CI matrix Node 18–24 |
 | 2026-10-08 | Phase 2: src/ TS straight-port (legacy deps), tsdown dual build, exports map w/ per-condition types, golden suite, smoke-pack | 151/151 (unit+golden) vs src; CJS+ESM+types verified on packed tarball; v5.0.0-alpha.0 |
 | 2026-10-08 | Phase 3a–e: all dep swaps (encryption/txutils/signing/keystore/upgrade), comparison suite, dep cleanup | **160/160** (unit+golden+comparison); runtime audit 0 vulns (was 31); signMsg byte-exact via viem; a1d16c9 |
+| 2026-10-08 | Phase 4: Anvil e2e (transfer, deploy+addr-prediction, call, signTransaction flow, msg recovery) | **165/165** all projects; deploy addr == receipt; foundry-toolchain CI; `prepare` script added |
 
 ## 10. Consumer contract — `eth-hot-wallet` (link session t-9be9, 2026-10-08)
 

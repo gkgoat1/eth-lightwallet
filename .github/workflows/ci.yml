@@ -33,6 +33,10 @@ jobs:
       # sources are removed in a later phase).
       - run: npm run test:legacy-harness
 
+      # Anvil e2e (Foundry toolchain).
+      - uses: foundry-rs/foundry-toolchain@v1
+      - run: npm run test:e2e
+
       # Build + packed-tarball smoke test (CJS require, ESM import, types
       # under node16 + bundler, golden address pin).
       - run: npm run smoke
