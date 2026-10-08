@@ -1,0 +1,103 @@
+{
+  "provenance": {
+    "generator": "legacy/ == eth-lightwallet@4.0.0 (tag pre-modernization, d21df74 == ConsenSys upstream)",
+    "generatedAt": "2026-10-08",
+    "node": "v26.10.0"
+  },
+  "kdf": {
+    "algorithm": "scrypt",
+    "params": {
+      "logN": 14,
+      "r": 8,
+      "p": 1,
+      "dkLen": 32
+    },
+    "password": "golden-test-password-1",
+    "salt": "golden-fixed-salt-1",
+    "pwDerivedKeyHex": "ac0979cfbd6f3243afa427964ed36e4fbdc80f8b06bfde04a3010f70ccc1d042"
+  },
+  "vault": {
+    "input": {
+      "mnemonic": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+      "password": "golden-test-password-1",
+      "salt": "golden-fixed-salt-1",
+      "hdPathString": "m/0'/0'/0'"
+    },
+    "serialized": "{\"encSeed\":{\"encStr\":\"zfS05Rx1YKkCqV7Yrw5m0dO9B6dS5JUf7hA6wQf3PSPKGFtYC+2GBHP7qP7aKhTFbQFDrEjQFvSawBNy0NlyZMmwpDSvg0PpiYaT+iK9pTdbtiqdYc66oqnaHQF3XBjYhDlP2DIQY9pgSFyS7wzFkkZVBKUOMJUrfRQN2YNf5nyPTQQCRFs4Hg==\",\"nonce\":\"QqEZUP5dDlcEL7i9NBE2XbY+GaJIEe0C\"},\"encHdRootPriv\":{\"encStr\":\"7fhHqboWdgAjEANGC6MmLSgxtrww9MZblq05tYnB/tq+DBtfTIbV1p+GqT5uNmwvoFklN/LycXQQoCM9dRtQ2V6CpUBwas82oRtrcvl2L7yE8bj1G/eeB7jTx+3AkqZQL/Qz9iLUQgQIKySwItqJ9eD/J1W+XsKfR5FuhToW/w==\",\"nonce\":\"hSXfkpUT1SzKmRU1kw+olJo4HVSOe1bx\"},\"addresses\":[\"339bc745c15d75126aba96243ea35271a5f568bf\",\"4720bb8d2c3e314e1541566330d480c76e4ea07e\",\"30eada0533b18d724e2c9f7a6c41edb0af786464\",\"ede64dbe5b9ef8f96cdc59fd1c34d96ad070e3ea\",\"d50fbacb773130fc39b7167cdae94f54cf19619d\"],\"encPrivKeys\":{\"339bc745c15d75126aba96243ea35271a5f568bf\":{\"key\":\"gUkpvrUOEYQVcvzcyg0lvMw4ZtOpQSh7ECKaNZ0prt6xPpANN/rYLmjOjHKSsWaF\",\"nonce\":\"niD0iWt3WewAJmNpDSLMrofDwjK+K4Dr\"},\"4720bb8d2c3e314e1541566330d480c76e4ea07e\":{\"key\":\"n2A9N+eQLOn2Kr2ovCktBLQcbjEm+GtE8Z41o7F8WoVnScENiFdxLOm/CBewcPGo\",\"nonce\":\"RpLYfbT+r1xZdkYPuwGKuaZ3H2R7E/i+\"},\"30eada0533b18d724e2c9f7a6c41edb0af786464\":{\"key\":\"MzPQUfyQ0cESvEm/aIr1FFeZJsCaoxae81iWVvWMc95Oc9M9kThp9hZhGDl6yFWn\",\"nonce\":\"cK/MYUcVkzBROOdXCkDEkCUFA0fHJRox\"},\"ede64dbe5b9ef8f96cdc59fd1c34d96ad070e3ea\":{\"key\":\"2H5rfA7PVEmbnakiO11B4jk8MbFNOylC+uMdqYd/Y2QRbHY+7XPmaSyfK46Y4VwT\",\"nonce\":\"ri/46XMg+2oueLL40CsDHtDHbnkBKDxK\"},\"d50fbacb773130fc39b7167cdae94f54cf19619d\":{\"key\":\"g3/nRrtWPlO4JhuA4fiVKteCV04wkEs2PTgMV78CXIv+ohk+7t5L+QRLECaZQWN5\",\"nonce\":\"H+t7zGvOq42YO2ZCFrq6ayUortfDrYIb\"}},\"hdPathString\":\"m/0'/0'/0'\",\"salt\":\"golden-fixed-salt-1\",\"hdIndex\":5,\"version\":3}",
+    "decryptedSeed": "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    "hdIndexAfter": 5
+  },
+  "firstFiveAddresses": [
+    "0x339bc745c15d75126aba96243ea35271a5f568bf",
+    "0x4720bb8d2c3e314e1541566330d480c76e4ea07e",
+    "0x30eada0533b18d724e2c9f7a6c41edb0af786464",
+    "0xede64dbe5b9ef8f96cdc59fd1c34d96ad070e3ea",
+    "0xd50fbacb773130fc39b7167cdae94f54cf19619d"
+  ],
+  "firstFivePrivateKeys": [
+    "4c795673d1bec549dc03dec0e6be1ec0a28a866245de79e02939a8e436d3901c",
+    "08371d351f6cfc063bed48ff7a238602c64c59f2d1d95b8f352840d1154022c7",
+    "8dbf9ecef0eca37fdd04cfce4b4cb9294095b861ba6a491ca8476b04108e95b6",
+    "c269b13ddead929740a4e1ed72dadd71d2b55c7dfd4662daaf34872992c29e3b",
+    "fcf9952dfdafe0184e682a086dfee7a42412915a144c1a4be6a09206f452fb13"
+  ],
+  "signedLegacyTxs": [
+    {
+      "txObject": {
+        "from": "0x339bc745c15d75126aba96243ea35271a5f568bf",
+        "gasPrice": "0x4a817c800",
+        "gasLimit": "0x5208",
+        "nonce": "0x00",
+        "to": "0x3535353535353535353535353535353535353535",
+        "value": "0x0de0b6b3a7640000",
+        "data": "0x"
+      },
+      "rawUnsigned": "0xec808504a817c800825208943535353535353535353535353535353535353535880de0b6b3a7640000801c8080",
+      "rawSigned": "f86c808504a817c800825208943535353535353535353535353535353535353535880de0b6b3a7640000801ba0c1938f1eaa0eed3a60720af128f32da0d25a75b3e15b1ac2fbfd5aa7155ae877a057c5c345f11faebfd7e255ea376aea887bbeaea9ec1dfa7d7c273bd5e3206b18"
+    },
+    {
+      "txObject": {
+        "from": "0x339bc745c15d75126aba96243ea35271a5f568bf",
+        "gasPrice": "0x4a817c800",
+        "gasLimit": "0x5208",
+        "nonce": "0x01",
+        "to": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "value": "0x00",
+        "data": "0xa9059cbb000000000000000000000000353535353535353535353535353535353535353500000000000000000000000000000000000000000000000000000000000f4240"
+      },
+      "rawUnsigned": "0xf869018504a817c80082520894a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4880b844a9059cbb000000000000000000000000353535353535353535353535353535353535353500000000000000000000000000000000000000000000000000000000000f42401c8080",
+      "rawSigned": "f8a9018504a817c80082520894a0b86991c6218b36c1d19d4a2e9eb0ce3606eb4880b844a9059cbb000000000000000000000000353535353535353535353535353535353535353500000000000000000000000000000000000000000000000000000000000f42401ca068af375373898f6afa67d415ea40399c89f00a7c6724a55fde259d78f5f7921fa079f6cab7489791a2f2b1dffc9f5a5fecb91d46115234649488e000d2b82ab0e1"
+    },
+    {
+      "txObject": {
+        "from": "0x339bc745c15d75126aba96243ea35271a5f568bf",
+        "gasPrice": "0x4a817c800",
+        "gasLimit": "0x5208",
+        "nonce": "0x02",
+        "to": "0x1111111111111111111111111111111111111111",
+        "value": "0x01",
+        "data": "0xdeadbeef"
+      },
+      "rawUnsigned": "0xe8028504a817c8008252089411111111111111111111111111111111111111110184deadbeef1c8080",
+      "rawSigned": "f868028504a817c8008252089411111111111111111111111111111111111111110184deadbeef1ba0fb2864d1b00dc31841aaabbc4684303917653691b469900936019c14fae30c6ca072d2ebd19c061d628b7e85d9aad3c439aaca3dbb5664e95d96e554858d22983c"
+    }
+  ],
+  "upgrades": {
+    "v1": {
+      "password": "test",
+      "addresses": [
+        "0xbc4061a92334dbec978e7c60d631d40ac9f2366d"
+      ],
+      "hdPathString": "m/0'/0'/0'",
+      "hdIndex": 1
+    },
+    "v2": {
+      "password": "PHveKjhQ&8dwWEdhu]q6",
+      "addresses": [
+        "0xbe159be50befb5fe233871cf0e2ebe4d3005fd6f"
+      ],
+      "hdPathString": "m/44'/60'/0'/0",
+      "hdIndex": 1
+    }
+  }
+}
