@@ -15,7 +15,7 @@
  */
 import { createLegacyTx, type LegacyTx } from '@ethereumjs/tx';
 import { RLP } from '@ethereumjs/rlp';
-import { bytesToHex, hexToBytes } from '@ethereumjs/util';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { encodeAbiParameters, toFunctionSelector } from 'viem';
 
@@ -94,7 +94,7 @@ export function valueTx(txObject: TxObject): string {
 }
 
 export function createdContractAddress(fromAddress: string, nonce: number): string {
-  const addressBuf = hexToBytes(hexPref(fromAddress));
+  const addressBuf = hexToBytes(fromAddress.startsWith('0x') ? fromAddress.slice(2) : fromAddress);
   const rlpEncoded = RLP.encode([addressBuf, nonce]);
   const hash = keccak_256(rlpEncoded);
 

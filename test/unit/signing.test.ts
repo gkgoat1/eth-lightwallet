@@ -94,16 +94,16 @@ describe(`Signing [target=${TARGET}]`, () => {
         expect(addr).toBe(fixture.ethjsTxParams.from);
 
         const msg = 'this is a message';
-        const signedMsg = Signing.signMsg(ks, pw, msg, addr);
+        const signedMsg = await Signing.signMsg(ks, pw, msg, addr);
         const msgHash = Util.addHexPrefix(Util.keccak(msg).toString('hex'));
-        const signedMsgHash = Signing.signMsgHash(ks, pw, msgHash, addr);
+        const signedMsgHash = await Signing.signMsgHash(ks, pw, msgHash, addr);
 
         // signedMsg and signedMsgHash have the same signature
         expect(signedMsg.v).toBe(signedMsgHash.v);
         expect(signedMsg.r.toString()).toBe(signedMsgHash.r.toString());
         expect(signedMsg.s.toString()).toBe(signedMsgHash.s.toString());
 
-        const recoveredAddress = Signing.recoverAddress(msg, signedMsg.v, signedMsg.r, signedMsg.s);
+        const recoveredAddress = await Signing.recoverAddress(msg, signedMsg.v, signedMsg.r, signedMsg.s);
 
         expect(addr).toBe('0x' + recoveredAddress.toString('hex'));
         const concatSig = Signing.concatSig(signedMsg);
