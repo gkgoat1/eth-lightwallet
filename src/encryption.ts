@@ -2,16 +2,15 @@ import Nacl from 'tweetnacl';
 import NaclUtil from 'tweetnacl-util';
 import * as Assert from './assert';
 
-export function encodeHex(msgUInt8Arr: Uint8Array): string {
-  const msgBase64 = NaclUtil.encodeBase64(msgUInt8Arr);
+// noble hex utils — browser-safe, no Buffer dependency.
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 
-  return Buffer.from(msgBase64, 'base64').toString('hex');
+export function encodeHex(msgUInt8Arr: Uint8Array): string {
+  return bytesToHex(msgUInt8Arr);
 }
 
 export function decodeHex(msgHex: string): Uint8Array {
-  const msgBase64 = Buffer.from(msgHex, 'hex').toString('base64');
-
-  return NaclUtil.decodeBase64(msgBase64);
+  return hexToBytes(msgHex);
 }
 
 export function asymEncryptRaw(
@@ -108,7 +107,7 @@ export function multiEncryptString(
   }
 
   const encryptedSymKey = theirPubKeyArray.map((theirPubKey) => {
-    const { alg, ...props } = asymEncryptRaw(keystore, pwDerivedKey, symEncryptionKey, myAddress, theirPubKey);
+    const { alg: _alg, ...props } = asymEncryptRaw(keystore, pwDerivedKey, symEncryptionKey, myAddress, theirPubKey);
 
     return {
       ...props,
