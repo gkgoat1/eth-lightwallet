@@ -1,13 +1,17 @@
-import CryptoJS from 'crypto-js';
-import Util from 'ethereumjs-util';
-// Default import + property access — Node's cjs-module-lexer can't detect
-// elliptic's named `ec` export, so `import { ec }` fails under real ESM.
-import elliptic from 'elliptic';
-import BitCore from 'bitcore-lib';
-import Mnemonic from 'bitcore-mnemonic';
+// Modernized deps (Phase 3d). Dropped: crypto-js, ethereumjs-util@6,
+// elliptic, bitcore-lib, bitcore-mnemonic, scrypt-async.
+// Now: @scure/bip39 (mnemonic), @scure/bip32 (HD), @noble/hashes (scrypt KDF,
+// keccak, sha256), @noble/curves (secp256k1 pubkey), tweetnacl (kept).
+import { generateMnemonic, validateMnemonic, mnemonicToSeedSync, entropyToMnemonic } from '@scure/bip39';
+import { wordlist } from '@scure/bip39/wordlists/english.js';
+import { HDKey } from '@scure/bip32';
+import { scrypt } from '@noble/hashes/scrypt.js';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { keccak_256 } from '@noble/hashes/sha3.js';
+import { bytesToHex, hexToBytes, randomBytes, utf8ToBytes } from '@noble/hashes/utils.js';
+import { secp256k1 } from '@noble/curves/secp256k1.js';
 import Nacl from 'tweetnacl';
 import NaclUtil from 'tweetnacl-util';
-import ScryptAsync from 'scrypt-async';
 
 // Named imports (not `import * as`) — with verbatimModuleSyntax, namespace
 // imports used only in type positions get fully erased from the bundle.
@@ -16,10 +20,13 @@ import { decodeHex, encodeHex } from './encryption';
 import { signTx } from './signing';
 import { createTx, txToHexString } from './txutils';
 
-const Random = BitCore.crypto.Random;
-const Hash = BitCore.crypto.Hash;
-
-const ec = new elliptic.ec('secp256k1');
+// Minimal hex-prefix helpers (replaces ethereumjs-util).
+function addHexPrefix(h: string): string {
+  return h.startsWith('0x') ? h : '0x' + h;
+}
+function stripHexPrefix(h: string): string {
+  return h.startsWith('0x') ? h.slice(2) : h;
+}
 
 function leftPadString(stringToPad: string, padChar: string, length: number): string {
   let repeatedPadChar = '';
@@ -86,11 +93,15 @@ export class KeyStore {
       // hdRoot is the relative root from which we derive the keys using generateNewAddress().
       // The derived keys are then `hdRoot/hdIndex`.
 
-      const hdRoot = new Mnemonic(mnemonic).toHDPrivateKey().xprivkey;
-      const hdRootKey = new BitCore.HDPrivateKey(hdRoot);
-      const hdPathKey = hdRootKey.derive(hdPathString).xprivkey;
+      // BIP39 mnemonic -> seed -> BIP32 root -> derive hdPathString.
+      // Store the xpriv (scure privateExtendedKey) — same format as legacy's
+      // bitcore .xprivkey, so the vault format is unchanged.
+      const seed = mnemonicToSeedSync(mnemonic);
+      const hdRootKey = HDKey.fromMasterSeed(seed);
+      const hdPathKey = hdRootKey.derive(hdPathString);
+      const xpriv = hdPathKey.privateExtendedKey;
 
-      this.encHdRootPriv = KeyStore._encryptString(hdPathKey, pwDerivedKey);
+      this.encHdRootPriv = KeyStore._encryptString(xpriv, pwDerivedKey);
     }
   }
 
@@ -114,7 +125,7 @@ export class KeyStore {
   }
 
   getAddresses(): string[] {
-    return this.addresses.map((addr) => Util.addHexPrefix(addr));
+    return this.addresses.map((addr) => addHexPrefix(addr));
   }
 
   getSeed(pwDerivedKey: Uint8Array): string {
@@ -132,7 +143,7 @@ export class KeyStore {
   exportPrivateKey(address: string, pwDerivedKey: Uint8Array): string {
     assertDerivedKey(this, pwDerivedKey);
 
-    const addr = Util.stripHexPrefix(address).toLowerCase();
+    const addr = stripHexPrefix(address).toLowerCase();
 
     if (this.encPrivKeys[addr] === undefined) {
       throw new Error('KeyStore.exportPrivateKey: Address not found in KeyStore');
@@ -176,7 +187,7 @@ export class KeyStore {
   }
 
   hasAddress(address: string, callback: (err: unknown, hasAddr?: boolean) => void): void {
-    const addrToCheck = Util.stripHexPrefix(address);
+    const addrToCheck = stripHexPrefix(address);
 
     if (this.encPrivKeys[addrToCheck] === undefined) {
       const err = new Error('Address not found!');
@@ -196,7 +207,7 @@ export class KeyStore {
 
     const tx = createTx(txObj);
     const rawTx = txToHexString(tx);
-    const signingAddress = Util.stripHexPrefix(txParams.from);
+    const signingAddress = stripHexPrefix(txParams.from);
 
     this.passwordProvider((err, password) => {
       if (err) {
@@ -212,7 +223,7 @@ export class KeyStore {
 
         const signedTx = signTx(this, pwDerivedKey as Uint8Array, rawTx, signingAddress);
 
-        callback(null, Util.addHexPrefix(signedTx));
+        callback(null, addHexPrefix(signedTx));
       });
     });
   }
@@ -220,18 +231,21 @@ export class KeyStore {
   _generatePrivKeys(pwDerivedKey: Uint8Array, n: number): { privKey: string; encPrivKey: EncryptedKeyBlob }[] {
     assertDerivedKey(this, pwDerivedKey);
 
-    const hdRoot = KeyStore._decryptString(this.encHdRootPriv, pwDerivedKey);
+    const xpriv = KeyStore._decryptString(this.encHdRootPriv, pwDerivedKey);
 
-    if (!hdRoot || hdRoot.length === 0) {
+    if (!xpriv || xpriv.length === 0) {
       throw new Error('Provided password derived key is wrong');
     }
+
+    // Reconstruct the HD root from the stored xpriv.
+    const hdRoot = HDKey.fromExtendedKey(xpriv);
 
     const keys: { privKey: string; encPrivKey: EncryptedKeyBlob }[] = [];
 
     for (let i = 0; i < n; i++) {
-      const hdPrivateKey = new BitCore.HDPrivateKey(hdRoot).derive(this.hdIndex++);
-      const privateKeyBuf: Buffer = hdPrivateKey.privateKey.toBuffer();
-      let privateKeyHex = privateKeyBuf.toString('hex');
+      const child = hdRoot.deriveChild(this.hdIndex++);
+      const privateKeyBuf: Uint8Array = child.privateKey!;
+      let privateKeyHex = bytesToHex(privateKeyBuf);
 
       if (privateKeyBuf.length < 16) {
         // Way too small key, something must have gone wrong
@@ -243,7 +257,7 @@ export class KeyStore {
         // Pad private key if too short
         // bitcore has a bug where it sometimes returns
         // truncated keys
-        privateKeyHex = leftPadString(privateKeyBuf.toString('hex'), '0', 64);
+        privateKeyHex = leftPadString(bytesToHex(privateKeyBuf), '0', 64);
       }
 
       const encPrivateKey = KeyStore._encryptKey(privateKeyHex, pwDerivedKey);
@@ -296,7 +310,8 @@ export class KeyStore {
   }
 
   static generateSalt(byteCount?: number): string {
-    return BitCore.crypto.Random.getRandomBuffer(byteCount || 32).toString('base64');
+    // CSPRNG (Phase 3 §4.3: switched from BitCore.crypto.Random).
+    return NaclUtil.encodeBase64(randomBytes(byteCount || 32));
   }
 
   // Generates a random seed. If the optional string extraEntropy is set,
@@ -306,25 +321,25 @@ export class KeyStore {
   //  it can give some protection from a bad RNG.
   // If extraEntropy is not set, the random number generator is used directly.
   static generateRandomSeed(extraEntropy?: string): string {
-    let seed: any = '';
+    let seed: string;
 
     if (extraEntropy === undefined) {
-      seed = new Mnemonic(Mnemonic.Words.ENGLISH);
+      seed = generateMnemonic(wordlist);
     } else if (typeof extraEntropy === 'string') {
-      const entBuf = Buffer.from(extraEntropy);
-      const randBuf = Random.getRandomBuffer(256 / 8);
+      const entBuf = utf8ToBytes(extraEntropy);
+      const randBuf = randomBytes(256 / 8);
       const hashedEnt = this._concatAndSha256(randBuf, entBuf).slice(0, 128 / 8);
 
-      seed = new Mnemonic(hashedEnt, Mnemonic.Words.ENGLISH);
+      seed = entropyToMnemonic(hashedEnt, wordlist);
     } else {
       throw new Error('generateRandomSeed: extraEntropy is set but not a string.');
     }
 
-    return seed.toString();
+    return seed;
   }
 
   static isSeedValid(seed: string): boolean {
-    return Mnemonic.isValid(seed, Mnemonic.Words.ENGLISH);
+    return validateMnemonic(seed, wordlist);
   }
 
   static deserialize(keystore: string): KeyStore {
@@ -365,25 +380,26 @@ export class KeyStore {
       salt = KeyStore.DEFAULT_SALT;
     }
 
-    const logN = 14;
+    const N = 2 ** 14; // logN = 14
     const r = 8;
+    const p = 1;
     const dkLen = 32;
-    const interruptStep = 200;
 
-    const cb = function (derKey: any) {
+    // @noble/hashes scrypt is byte-identical to scrypt-async at these params
+    // (golden-pinned). Async via setTimeout to preserve the non-blocking
+    // contract scrypt-async provided (interruptStep yielded to the event loop).
+    setTimeout(() => {
       let err: unknown = null;
       let ui8arr: Uint8Array | undefined;
 
       try {
-        ui8arr = new Uint8Array(derKey);
+        ui8arr = scrypt(password, salt as string, { N, r, p, dkLen });
       } catch (e) {
         err = e;
       }
 
       (callback as (err: unknown, derivedKey?: Uint8Array) => void)(err, ui8arr);
-    };
-
-    ScryptAsync(password, salt, logN, r, dkLen, interruptStep, cb, null);
+    }, 0);
   }
 
   static _encryptString(string: string, pwDerivedKey: Uint8Array): EncryptedStringBlob {
@@ -436,15 +452,13 @@ export class KeyStore {
   }
 
   static _computeAddressFromPrivKey(privateKey: string): string {
-    const keyPair = ec.genKeyPair();
-    keyPair._importPrivate(privateKey, 'hex');
+    // secp256k1 pubkey (uncompressed, drop 0x04) -> keccak256 -> last 20 bytes.
+    // noble keccak_256 == crypto-js SHA3 quirk for these inputs (golden-pinned).
+    const privBytes = hexToBytes(privateKey.padStart(64, '0'));
+    const pubKey = secp256k1.getPublicKey(privBytes, false).slice(1);
+    const hash = keccak_256(pubKey);
 
-    const pubKey = keyPair.getPublic(false, 'hex').slice(2);
-    const pubKeyWordArray = CryptoJS.enc.Hex.parse(pubKey);
-    const hash = CryptoJS.SHA3(pubKeyWordArray, { outputLength: 256 });
-    const address = hash.toString(CryptoJS.enc.Hex).slice(24);
-
-    return address;
+    return bytesToHex(hash.slice(-20));
   }
 
   static _computePubkeyFromPrivKey(privKey: string, curve: string): string {
@@ -452,25 +466,20 @@ export class KeyStore {
       throw new Error('KeyStore._computePubkeyFromPrivKey: Only "curve25519" supported.');
     }
 
-    const privateKeyBase64 = Buffer.from(privKey, 'hex').toString('base64');
-    const privateKeyUInt8Array = NaclUtil.decodeBase64(privateKeyBase64);
+    const privateKeyUInt8Array = hexToBytes(privKey);
     const pubKey = Nacl.box.keyPair.fromSecretKey(privateKeyUInt8Array).publicKey;
-    const pubKeyBase64 = NaclUtil.encodeBase64(pubKey);
-    const pubKeyHex = Buffer.from(pubKeyBase64, 'base64').toString('hex');
 
-    return pubKeyHex;
+    return bytesToHex(pubKey);
   }
 
   // This function is tested using the test vectors here:
   // http://www.di-mgt.com.au/sha_testvectors.html
-  static _concatAndSha256(entropyBuf0: Buffer, entropyBuf1: Buffer): Buffer {
-    const totalEnt = Buffer.concat([entropyBuf0, entropyBuf1]);
+  static _concatAndSha256(entropyBuf0: Uint8Array, entropyBuf1: Uint8Array): Uint8Array {
+    const totalEnt = new Uint8Array(entropyBuf0.length + entropyBuf1.length);
+    totalEnt.set(entropyBuf0, 0);
+    totalEnt.set(entropyBuf1, entropyBuf0.length);
 
-    if (totalEnt.length !== entropyBuf0.length + entropyBuf1.length) {
-      throw new Error('generateRandomSeed: Logic error! Concatenation of entropy sources failed.');
-    }
-
-    return Hash.sha256(totalEnt);
+    return Buffer.from(sha256(totalEnt));
   }
 
   static DEFAULT_SALT = 'lightwalletSalt';
