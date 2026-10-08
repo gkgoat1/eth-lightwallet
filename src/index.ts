@@ -13,6 +13,17 @@ import * as upgrade from './upgrade';
 
 export { txutils, encryption, signing, keystore, upgrade };
 
+export type {
+  CreateVaultOptions,
+  SerializedKeystore,
+  TxParams,
+  AsymEncryptedMessage,
+  MultiEncryptedMessage,
+  Callback,
+} from './types';
+
+export type { KeyStore } from './keystore';
+
 export default {
   txutils,
   encryption,

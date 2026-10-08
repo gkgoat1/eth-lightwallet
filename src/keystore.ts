@@ -19,6 +19,7 @@ import { derivedKey as assertDerivedKey } from './assert';
 import { decodeHex, encodeHex } from './encryption';
 import { signTx } from './signing';
 import { createTx, txToHexString } from './txutils';
+import type { CreateVaultOptions, TxParams } from './types';
 
 // Minimal hex-prefix helpers (replaces ethereumjs-util).
 function addHexPrefix(h: string): string {
@@ -198,7 +199,7 @@ export class KeyStore {
     callback(null, true);
   }
 
-  signTransaction(txParams: any, callback: (err: unknown, signedTx?: string) => void): void {
+  signTransaction(txParams: TxParams, callback: (err: unknown, signedTx?: string) => void): void {
     const { gas, ...params } = txParams;
     const txObj = {
       ...params,
@@ -272,7 +273,7 @@ export class KeyStore {
   }
 
   static createVault(
-    opts: { hdPathString?: string; seedPhrase?: string; password: string; salt?: string },
+    opts: CreateVaultOptions,
     cb: (err: unknown, ks?: KeyStore) => void,
   ): void {
     const { hdPathString, seedPhrase, password } = opts;

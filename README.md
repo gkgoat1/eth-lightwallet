@@ -2,6 +2,56 @@
 
 A minimal ethereum javascript wallet.
 
+> **5.0.0 (this branch):** TypeScript rewrite, ESM-first with a CommonJS build,
+> modern audited dependencies (`@scure/*`, `@noble/*`, `@ethereumjs/*`, `viem`).
+> **Behavior is preserved** — same addresses, same signed transactions, same
+> keystore format, cross-compatible encryption — verified by golden fixtures and
+> a comparison suite against the frozen 4.0.0 code. See
+> [Migrating to 5.0.0](#migrating-to-500) and `RELEASE-NOTES.md`.
+
+## Migrating to 5.0.0
+
+**Install & import** — dual ESM/CJS, both work:
+
+```js
+// ESM
+import lightwallet, { keystore, signing, txutils, encryption, upgrade } from 'eth-lightwallet';
+
+// CommonJS
+const lightwallet = require('eth-lightwallet');
+const { keystore } = require('eth-lightwallet');
+```
+
+TypeScript types are included (`dist/index.d.ts` / `index.d.cts`) and resolve
+under both `moduleResolution: node16` and `bundler`.
+
+**Breaking changes (packaging-level only):**
+
+- **Node >= 18** required.
+- The checked-in **browser bundle** (`dist/lightwallet.min.js`, browserify
+  global) is **removed**. Bundle the ESM build yourself (vite/rollup/esbuild
+  webpack all consume it). The default export and named exports map to the old
+  `module.exports` shape, so `lightwallet.keystore` etc. are unchanged.
+- **`signMsg`, `signMsgHash`, and `recoverAddress` are now async** (return
+  Promises) because the underlying signer is async. `await` them. All other
+  methods keep their callback signatures (`createVault`, `keyFromPassword`,
+  `generateNewAddress`, `signTransaction`, …).
+- Message signatures are still **byte-identical** to 4.0.0 (the `signMsg`
+  golden passes unchanged); only the call is now awaited.
+
+**What did NOT change:**
+
+- Keystore serialization format (v3) — old vaults deserialize and decrypt.
+- HD derivation, address generation, private keys (verified against the
+  `addrprivkey100` + golden vectors).
+- scrypt KDF params (`logN=14, r=8, p=1, dkLen=32`) — byte-identical derived keys.
+- Legacy (pre-EIP-1559) transaction signing; `v = 27/28` unless you pass `chainId`.
+- tweetnacl secretbox/box encryption — cross-compatible with 4.0.0 ciphertexts.
+- v1/v2 → v3 keystore upgrades (byte-exact against the committed fixtures).
+
+**Security note:** the 4.0.0 dependency tree had **31 known vulnerabilities**
+(7 critical) — `npm audit` on the 5.0.0 runtime dependencies reports **0**.
+
 ## About
 
 LightWallet is a HD wallet that can store your private keys encrypted in the browser to allow you to run Ethereum dapps even if you're not running a local Ethereum node. It uses [BIP32][] and [BIP39][] to generate an HD tree of addresses from a randomly generated 12-word seed.

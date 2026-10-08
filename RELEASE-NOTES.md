@@ -1,5 +1,58 @@
 # Release Notes #
 
+## Version 5.0.0 - Unreleased ##
+
+TypeScript rewrite with modern audited dependencies, ESM-first dual build.
+**Behavior preserved** — verified against the frozen 4.0.0 code via golden
+fixtures, a live comparison suite (`legacy/` vs `src/`), and Anvil end-to-end
+tests.
+
+### Breaking (packaging-level only)
+
+* **Node >= 18** required.
+* Removed the checked-in browserify bundle (`dist/lightwallet.min.js`). The
+  package now ships `dist/index.js` (ESM) + `dist/index.cjs` (CJS) +
+  `dist/index.d.ts`/`index.d.cts`. Bundle the ESM build for browsers yourself.
+* `signMsg`, `signMsgHash`, `recoverAddress` are now **async** (return
+  Promises). All other methods keep their callback signatures.
+* `hdPathString` remains **required** in `createVault` (unchanged from 4.0.0).
+
+### Behavior preserved (verified)
+
+* Keystore v3 serialization format — old vaults deserialize + decrypt.
+* HD derivation / addresses / private keys (golden + `addrprivkey100` vectors).
+* scrypt KDF (`logN=14, r=8, p=1, dkLen=32`) — byte-identical derived keys.
+* Legacy pre-EIP-1559 tx signing, `v = 27/28` unless `chainId` is passed —
+  the pinned `rawSignedTx` fixtures are byte-exact.
+* **Message signatures are byte-identical** to 4.0.0 (the `expectedConcatSig`
+  golden passes unchanged) — only the call is now awaited.
+* tweetnacl secretbox/box encryption — cross-compatible with 4.0.0 ciphertexts.
+* v1/v2 → v3 keystore upgrades (byte-exact vs committed fixtures).
+
+### Dependencies
+
+* Dropped: `web3@0.20`, `ethereumjs-tx@1`, `ethereumjs-util@6`, `bitcore-lib`,
+  `bitcore-mnemonic`, `elliptic`, `scrypt-async`, `rlp` (old), `crypto-js@3`.
+* Added: `@scure/bip39`, `@scure/bip32`, `@noble/hashes`, `@noble/curves`,
+  `@ethereumjs/tx`, `@ethereumjs/rlp`, `@ethereumjs/util`, `@ethereumjs/common`,
+  `viem`, `crypto-js@4` (v1-upgrade AES-CBC only, off the default path).
+* Kept: `tweetnacl`, `tweetnacl-util` (stable, pure-JS, isomorphic).
+* **Security:** 4.0.0's dependency tree had **31 known vulnerabilities**
+  (7 critical, 6 high). `npm audit --omit=dev` on 5.0.0's runtime deps reports
+  **0**.
+
+### Build
+
+* Bundler: **tsdown** (rolldown). Dual ESM+CJS + per-condition `.d.ts`/`.d.cts`.
+* `exports` map: `import` → `dist/index.js` (+`index.d.ts`), `require` →
+  `dist/index.cjs` (+`index.d.cts`). `prepare` script self-builds for git deps.
+
+### Internal
+
+* The 4.0.0 source is frozen under `legacy/` as the comparison-test oracle.
+* Tests: vitest (unit + golden + comparison + Anvil e2e), plus the original
+  mocha suite redirected at `legacy/` as a regression floor.
+
 ## Version 4.0.0 - 2019-03-26 ##
 
 * Major cleanup - backwards compatible!
