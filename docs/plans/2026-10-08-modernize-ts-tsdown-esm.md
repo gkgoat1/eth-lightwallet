@@ -281,19 +281,25 @@ A tiny script (run in CI after `npm pack`):
 
 **Exit:** met. Legacy oracle confirmed runnable on the modern toolchain.
 
-### Phase 1 — Harness & CI (½ day)
+### Phase 1 — Harness & CI (½ day) — **DONE 2026-10-08**
 
-- [ ] Init `npm` refresh: `engines`, vitest, typescript, tsdown installed.
-- [ ] Port the 4 mocha suites to `test/unit/` (vitest, `node:assert`-style or
-      chai — mechanical port, still running against `legacy/` first to prove
-      the port is faithful).
-- [ ] GitHub Actions: matrix Node 18/20/22/24, `npm ci`, build, unit+golden,
-      e2e (anvil binary via foundry toolchain action or `npm i -g`
-      `@foundry-rs/...` — pin how), packaging smoke.
-- [ ] `npm audit` snapshot of the old tree saved to `docs/` for the
-      RELEASE-NOTES "vulnerabilities removed" section.
+- [x] Toolchain: vitest 5.0.3, typescript 7.0.2, tsdown 0.23.0 (devDeps,
+      exact-pinned via new `.npmrc save-exact=true`), `@types/node`.
+- [x] Ported the 4 mocha suites to `test/unit/*.test.ts` (vitest, assertions
+      1:1, bluebird-promisify replaced by local `promisify1/2`, `new Buffer`
+      → `Buffer.from`). Target selector `test/unit/target.ts`
+      (`LWT_TARGET=legacy|src`) — **144/144 pass against `legacy/`**, proving
+      the port faithful. `tsc --noEmit` clean.
+- [x] `package.json` scripts: `build` (tsdown), `typecheck`, `test`
+      (vitest unit), `test:legacy-harness` (original mocha, regression floor),
+      `coverage`, `gen:goldens`. browserify/prepublish scripts removed.
+- [x] GitHub Actions: `.github/workflows/ci.yml`, Node 18/20/22/24 matrix —
+      install (ignore-scripts), typecheck, vitest unit, mocha regression.
+      Anvil e2e job lands with Phase 4.
+- [x] npm audit snapshot (done in Phase 0, `docs/audit/`).
 
-**Exit:** green CI running old tests against old code in the new harness.
+**Exit:** met — new harness green locally on old code; CI file committed
+(verified on push).
 
 ### Phase 2 — TS + tsdown scaffold, zero dependency swaps (1 day)
 
@@ -390,6 +396,8 @@ contract address prediction matches on-chain reality.
 | 2026-10-08 | `dist/` gitignored + removed from git | done |
 | 2026-10-08 | npm audit baseline | 31 vulns (7 crit / 6 high) — `docs/audit/npm-audit-4.0.0-baseline.json` |
 | 2026-10-08 | Contract exchange with t-9be9 (eth-hot-wallet) | 4 corrections accepted; strict hdPathString confirmed; goldens to be shared bidirectionally |
+| 2026-10-08 | Goldens generated from legacy/ (vault, kdf pin, 5 addrs, 3 signed legacy txs, v1/v2 upgrades) | `test/golden/generated/vault-4.0.0.json`, cross-checked vs existing fixtures |
+| 2026-10-08 | Phase 1: vitest 5 + TS 7 + tsdown 0.23 harness; 4 suites ported | 144/144 vs `legacy/`; tsc clean; CI matrix Node 18–24 |
 
 ## 10. Consumer contract — `eth-hot-wallet` (link session t-9be9, 2026-10-08)
 

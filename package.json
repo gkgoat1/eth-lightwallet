@@ -8,11 +8,12 @@
     "url": "https://github.com/ConsenSys/eth-lightwallet.git"
   },
   "scripts": {
-    "build-js": "browserify index.js --s lightwallet -g [ babelify --presets [ @babel/preset-env @babel/preset-react ] ] | uglifyjs -c > dist/lightwallet.min.js",
-    "build-dev": "browserify index.js -o dist/lightwallet.js --s lightwallet -g [ babelify --presets [ @babel/preset-env @babel/preset-react ] ]",
-    "test": "./node_modules/.bin/mocha --reporter spec",
-    "coverage": "istanbul cover _mocha -- -R spec; open coverage/lcov-report/index.html",
-    "prepublish": "mkdir -p dist && npm run build-dev && npm run build-js"
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --project unit",
+    "test:legacy-harness": "./node_modules/.bin/mocha --reporter dot",
+    "coverage": "vitest run --coverage",
+    "gen:goldens": "node scripts/generate-goldens.js"
   },
   "keywords": [
     "ethereum",
@@ -77,6 +78,8 @@
     "@babel/core": "7.4.0",
     "@babel/preset-env": "7.4.2",
     "@babel/preset-react": "7.0.0",
+    "@types/node": "26.6.4",
+    "@vitest/coverage-v8": "5.0.3",
     "async": "2.6.2",
     "babelify": "10.0.0",
     "bluebird": "3.5.3",
@@ -84,6 +87,9 @@
     "chai": "4.2.0",
     "istanbul": "0.4.5",
     "mocha": "6.0.2",
-    "uglify-js": "3.5.2"
+    "tsdown": "0.23.0",
+    "typescript": "7.0.2",
+    "uglify-js": "3.5.2",
+    "vitest": "5.0.3"
   }
 }
