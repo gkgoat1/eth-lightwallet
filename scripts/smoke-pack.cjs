@@ -52,7 +52,7 @@ try {
   // 1. CJS require
   execFileSync(
     process.execPath,
-    ['-e', checkSnippet('CJS require', "Promise.resolve(require('eth-lightwallet'))")],
+    ['-e', checkSnippet('CJS require', "Promise.resolve(require('@gkgo/eth-lightwallet'))")],
     { cwd: tmp, stdio: 'inherit' },
   );
 
@@ -62,7 +62,7 @@ try {
     [
       '--input-type=module',
       '-e',
-      "import lw, { keystore } from 'eth-lightwallet';" +
+      "import lw, { keystore } from '@gkgo/eth-lightwallet';" +
         "if (keystore !== lw.keystore) throw new Error('ESM default/named mismatch');" +
         'globalThis.__lw = lw;',
     ],
@@ -73,7 +73,7 @@ try {
   // 3. ESM functional pin
   execFileSync(
     process.execPath,
-    ['--input-type=module', '-e', checkSnippet('ESM import', "import('eth-lightwallet')")],
+    ['--input-type=module', '-e', checkSnippet('ESM import', "import('@gkgo/eth-lightwallet')")],
     { cwd: tmp, stdio: 'inherit' },
   );
 
@@ -82,13 +82,13 @@ try {
   const tsBin = path.join(repoRoot, 'node_modules', '.bin', 'tsc');
   fs.writeFileSync(
     path.join(tmp, 'consumer.mts'),
-    "import lw, { keystore, txutils, signing, encryption, upgrade } from 'eth-lightwallet';\n" +
+    "import lw, { keystore, txutils, signing, encryption, upgrade } from '@gkgo/eth-lightwallet';\n" +
       'const salt: string = keystore.DEFAULT_SALT;\n' +
       'export { lw, txutils, signing, encryption, upgrade, salt };\n',
   );
   fs.writeFileSync(
     path.join(tmp, 'consumer.cts'),
-    "import lw = require('eth-lightwallet');\n" +
+    "import lw = require('@gkgo/eth-lightwallet');\n" +
       'const salt: string = lw.keystore.DEFAULT_SALT;\n' +
       'export { lw, salt };\n',
   );

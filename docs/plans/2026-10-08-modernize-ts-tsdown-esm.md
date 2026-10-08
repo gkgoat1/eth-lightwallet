@@ -445,8 +445,11 @@ regression; src v1-upgrade is verified byte-exact by golden+unit tests).
 - [x] **Bonus:** restored the full comparison oracle — vendored crypto-js@3.1.8
       for `legacy/` (gitignored), so the frozen 4.0.0 oracle is 144/144 green
       again (incl. v1-upgrade). Mocha harness redirected lib/ → legacy/.
+- [x] **Publish name decided:** `@gkgo/eth-lightwallet` (scoped, public).
+      package.json updated + `publishConfig.access=public`; smoke test packs
+      and verifies the scoped name. Publishing itself needs `npm login` as the
+      scope owner — user's step.
 - [ ] Decide fate of `legacy/` (recommend: keep through 5.x).
-- [ ] **Publish decision pending** (npm name/scope, version tag) — see §8 Q4.
 - [x] `npm pack` + smoke tests (done each phase via `npm run smoke`).
 
 **Status:** library is functionally complete + consumer-validated (t-9be9's
@@ -470,8 +473,9 @@ golden gate 20/20 green against a1d16c9). Awaiting publish decision.
    EVP_BytesToKey with `node:crypto`? (Phase 3e)
 2. CSPRNG switch confirmed for `generateSalt`/nonces? (§4.3 — default yes)
 3. Ship subpath exports (`eth-lightwallet/keystore`, …) in 5.0.0 or defer?
-4. Publish as `eth-lightwallet@5` on npm, or scoped (`@gkg/eth-lightwallet`
-   per t-9be9's plan), or only git? (Phase 5 decision)
+4. ~~Publish name/scope~~ → **DECIDED: `@gkgo/eth-lightwallet`** (scoped,
+   public access). Name is available on npm (404/unpublished); publishing
+   requires owning the `@gkgo` npm scope (user's step).
 5. Keep `legacy/` in-repo for how long (5.x cycle, or drop at 5.0.0)?
 
 ## 11. Progress log

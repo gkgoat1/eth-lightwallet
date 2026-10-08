@@ -15,11 +15,11 @@ A minimal ethereum javascript wallet.
 
 ```js
 // ESM
-import lightwallet, { keystore, signing, txutils, encryption, upgrade } from 'eth-lightwallet';
+import lightwallet, { keystore, signing, txutils, encryption, upgrade } from '@gkgo/eth-lightwallet';
 
 // CommonJS
-const lightwallet = require('eth-lightwallet');
-const { keystore } = require('eth-lightwallet');
+const lightwallet = require('@gkgo/eth-lightwallet');
+const { keystore } = require('@gkgo/eth-lightwallet');
 ```
 
 TypeScript types are included (`dist/index.d.ts` / `index.d.cts`) and resolve
@@ -67,14 +67,14 @@ Please note that LightWallet has not been through a comprehensive security revie
 ## Get Started
 
 ```
-npm install eth-lightwallet
+npm install @gkgo/eth-lightwallet
 ```
 
 As of 5.0.0 there is no pre-built browser bundle. Consume the ESM build
 (`dist/index.js`) through your own bundler (vite/rollup/esbuild/webpack):
 
 ```js
-import lightwallet from 'eth-lightwallet';
+import lightwallet from '@gkgo/eth-lightwallet';
 // lightwallet.keystore, lightwallet.txutils, lightwallet.signing, ...
 ```
 
