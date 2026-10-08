@@ -32,7 +32,7 @@
     "test": "vitest run --project unit --project golden --project comparison",
     "test:e2e": "vitest run --project e2e",
     "test:all": "vitest run",
-    "test:legacy-harness": "./node_modules/.bin/mocha --reporter dot",
+    "test:legacy-harness": "./node_modules/.bin/mocha --reporter dot test/legacy-harness/*.js",
     "coverage": "vitest run --coverage",
     "gen:goldens": "node scripts/generate-goldens.js",
     "smoke": "npm run build && node scripts/smoke-pack.cjs",

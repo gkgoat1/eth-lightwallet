@@ -6,3 +6,4 @@ package-lock.json
 dist/
 .tmp-legacy-test/
 .vitest/
+legacy/node_modules/
