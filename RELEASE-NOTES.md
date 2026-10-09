@@ -1,5 +1,56 @@
 # Release Notes #
 
+## Version 5.1.0 - Unreleased ##
+
+Backwards-compatible feature release. **No existing API removed or changed in
+behavior** — all additions are opt-in. Every 5.0.0 golden, comparison, and
+Anvil e2e suite stays green.
+
+### EIP-1559 (type-2) transactions
+
+* Opt-in via **explicit `txType: 2`** (never inferred from fee fields — a
+  `gasPrice` tx always stays legacy). `txType` omitted/`0` = legacy.
+* `txutils`: `create1559Tx`, `valueTx1559`, `functionTx1559`,
+  `createContractTx1559` (`chainId` required — EIP-155 is baked into type-2).
+* `signing.sign1559Tx`, and `keystore.signTransaction{,Async}` accepts `txType`
+  with `maxFeePerGas`/`maxPriorityFeePerGas`/`chainId`.
+* Mixed/invalid fee params, missing `chainId`, unsupported `txType` → clear errors.
+
+### v4 keystore format (opt-in)
+
+* **Tighter security, modern encryption** (noble): Argon2id password KDF
+  (params stored per-vault; default `m=32MiB`, browser profile `m=16MiB`) and
+  **XChaCha20-Poly1305 AEAD with AAD** field+version binding (tamper-evident).
+* **`KeyStoreV4`** + `detectVersion`. **v3 remains the default write format**;
+  v4 is strictly opt-in. v3 vaults are fully supported and unchanged.
+* **Migration:** `upgrade.upgradeV3ToV4{,Async}` preserves addresses and
+  private keys byte-for-byte. v1/v2 → v4 = existing v1/v2 → v3, then v3 → v4.
+
+### Post-quantum (off-chain encryption only)
+
+* **`encryptionV4`**: PQ-hybrid **X25519 + ML-KEM-768** (FIPS 203) KEM — both
+  classical AND post-quantum must be broken to recover a message — driving
+  XChaCha20-Poly1305 AEAD.
+* **Scope:** off-chain message encryption ONLY. On-chain Ethereum
+  signing/addresses remain classical secp256k1 (an on-chain PQ signature is
+  not valid on the EVM). The v3 `encryption` module is unchanged.
+
+### Async internals + dual API
+
+* Async-first internals with canonical `*Async` methods **and** callback
+  wrappers (5.0.0 signatures preserved):
+  `createVaultAsync`, `keyFromPasswordAsync`, `hasAddressAsync`,
+  `signTransactionAsync`, `deriveKeyFromPasswordAndSaltAsync`,
+  `upgradeOldSerializedAsync`, `upgradeV3ToV4Async`.
+* `signMsg`/`signMsgHash`/`recoverAddress` accept an optional trailing
+  callback (dual promise/callback form).
+
+### Dependencies
+
+* Added `@noble/ciphers` (AEAD), `@noble/post-quantum` (ML-KEM-768/hybrid).
+  EIP-1559 uses the existing `@ethereumjs/tx@10`. Still 0 runtime
+  vulnerabilities (`npm audit --omit=dev`).
+
 ## Version 5.0.0 - 2026-10-08 ##
 
 TypeScript rewrite with modern audited dependencies, ESM-first dual build.

@@ -50,7 +50,39 @@ under both `moduleResolution: node16` and `bundler`.
 - v1/v2 → v3 keystore upgrades (byte-exact against the committed fixtures).
 
 **Security note:** the 4.0.0 dependency tree had **31 known vulnerabilities**
-(7 critical) — `npm audit` on the 5.0.0 runtime dependencies reports **0**.
+(7 critical) — `npm audit` on the 5.0.0/5.1.0 runtime dependencies reports **0**.
+
+## What's new in 5.1.0
+
+All **backwards-compatible** and opt-in (v3 vaults + legacy txs unchanged):
+
+- **EIP-1559 (type-2) transactions** — `txutils.create1559Tx` /
+  `valueTx1559` / `functionTx1559` / `createContractTx1559`,
+  `signing.sign1559Tx`, and `keystore.signTransaction{,Async}` with explicit
+  **`txType: 2`** (never inferred from fee fields). Legacy (type-0) is the
+  default.
+- **v4 keystore format** (opt-in) — Argon2id KDF + XChaCha20-Poly1305 AEAD with
+  AAD (tamper-evident). `KeyStoreV4`, `detectVersion`, and
+  `upgrade.upgradeV3ToV4{,Async}` (preserves addresses/keys). v3 is still the
+  default write format.
+- **Post-quantum off-chain encryption** — `encryptionV4`: X25519 + ML-KEM-768
+  hybrid (both must be broken) + AEAD. **Off-chain messages only;** on-chain
+  signing stays classical secp256k1 (EVM constraint).
+- **Async internals + dual API** — canonical `*Async` promise methods plus
+  callback wrappers: `createVaultAsync`, `keyFromPasswordAsync`,
+  `hasAddressAsync`, `signTransactionAsync`, `deriveKeyFromPasswordAndSaltAsync`,
+  `upgradeOldSerializedAsync`, `upgradeV3ToV4Async`. `signMsg`/`signMsgHash`/
+  `recoverAddress` also accept an optional trailing callback.
+
+```js
+// async/await
+const ks = await keystore.createVaultAsync({ password, seedPhrase, hdPathString });
+const pwDerivedKey = await ks.keyFromPasswordAsync(password);
+const signedTx = await ks.signTransactionAsync({ from, to, value, gas, gasPrice, nonce });
+
+// callbacks (unchanged)
+keystore.createVault({ password, seedPhrase, hdPathString }, (err, ks) => { /* ... */ });
+```
 
 ## About
 
