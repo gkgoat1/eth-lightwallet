@@ -18,6 +18,9 @@ export { txutils, encryption, signing, keystore, upgrade };
 export { KeyStoreV4, detectVersion } from './keystore-v4';
 export type { V4KeystoreData, V4KdfParams, V4AeadBlob } from './keystore-v4';
 
+/** v4 PQ-hybrid off-chain encryption (X25519 + ML-KEM-768). */
+export * as encryptionV4 from './encryption-v4';
+
 export type {
   CreateVaultOptions,
   SerializedKeystore,
@@ -29,6 +32,8 @@ export type {
 
 export type { KeyStore } from './keystore';
 
+import * as encryptionV4 from './encryption-v4';
+
 export default {
   txutils,
   encryption,
@@ -36,4 +41,5 @@ export default {
   keystore,
   upgrade,
   KeyStoreV4,
+  encryptionV4,
 };
