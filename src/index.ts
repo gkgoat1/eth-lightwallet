@@ -9,9 +9,14 @@ import * as txutils from './txutils';
 import * as encryption from './encryption';
 import * as signing from './signing';
 import { KeyStore as keystore } from './keystore';
+import { KeyStoreV4 } from './keystore-v4';
 import * as upgrade from './upgrade';
 
 export { txutils, encryption, signing, keystore, upgrade };
+
+/** v4 keystore format (5.1.0, opt-in). */
+export { KeyStoreV4, detectVersion } from './keystore-v4';
+export type { V4KeystoreData, V4KdfParams, V4AeadBlob } from './keystore-v4';
 
 export type {
   CreateVaultOptions,
@@ -30,4 +35,5 @@ export default {
   signing,
   keystore,
   upgrade,
+  KeyStoreV4,
 };

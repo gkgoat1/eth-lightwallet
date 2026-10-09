@@ -8,6 +8,7 @@ import { sha1 } from '@noble/hashes/legacy.js';
 import { keccak_512 } from '@noble/hashes/sha3.js';
 import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 import { KeyStore } from './keystore';
+import { KeyStoreV4 } from './keystore-v4';
 
 const HD_PATH_STRING = "m/0'/0'/0'";
 
@@ -152,6 +153,49 @@ export function upgradeOldSerialized(
   } else {
     throw new Error('Keystore is not of correct version.');
   }
+}
+
+/**
+ * Migrate a v3 keystore to v4 (5.1.0). Decrypts with the v3 scrypt-derived key,
+ * then re-encrypts seed/HD-root/privkeys under a fresh Argon2id-derived key
+ * with AEAD+AAD. Addresses and private keys are preserved byte-for-byte.
+ */
+export async function upgradeV3ToV4Async(
+  v3Serialized: string,
+  password: string,
+  opts?: { kdfProfile?: { m: number; t: number; p: number; dkLen: number } },
+): Promise<string> {
+  const v3 = KeyStore.deserialize(v3Serialized); // throws if not v3
+  const v3Key = await KeyStore.deriveKeyFromPasswordAndSaltAsync(password, v3.salt);
+
+  const seedPhrase = v3.getSeed(v3Key);
+
+  // Build a fresh v4 vault from the same seed + path.
+  const v4 = await KeyStoreV4.create({
+    hdPathString: v3.hdPathString,
+    seedPhrase,
+    password,
+    kdfProfile: opts?.kdfProfile,
+  });
+  const v4Key = await v4.deriveKeyFromPassword(password);
+
+  // Re-derive the SAME hdIndex worth of addresses (identical derivation).
+  v4.generateNewAddress(v4Key, v3.hdIndex);
+
+  return v4.serialize();
+}
+
+/** Callback wrapper for upgradeV3ToV4Async. */
+export function upgradeV3ToV4(
+  v3Serialized: string,
+  password: string,
+  callback: (err: unknown, serialized?: string) => void,
+  opts?: { kdfProfile?: { m: number; t: number; p: number; dkLen: number } },
+): void {
+  upgradeV3ToV4Async(v3Serialized, password, opts).then(
+    (s) => callback(null, s),
+    (e) => callback(e),
+  );
 }
 
 /** Canonical async form of upgradeOldSerialized (5.1.0). */
