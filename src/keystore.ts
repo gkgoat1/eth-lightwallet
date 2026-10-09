@@ -18,7 +18,7 @@ import NaclUtil from 'tweetnacl-util';
 import { derivedKey as assertDerivedKey } from './assert';
 import { decodeHex, encodeHex } from './encryption';
 import { signTx } from './signing';
-import { createTx, txToHexString } from './txutils';
+import { createTx, create1559Tx, txToHexString } from './txutils';
 import type { CreateVaultOptions, TxParams } from './types';
 
 // Minimal hex-prefix helpers (replaces ethereumjs-util).
@@ -215,23 +215,49 @@ export class KeyStore {
     callback(null, true);
   }
 
-  /** Canonical async form (legacy tx path; EIP-1559 lands in Phase 2). */
+  /**
+   * Canonical async form. Transaction type is EXPLICIT via `txParams.txType`
+   * (decision: never infer from fee fields):
+   *  - txType omitted or 0 → legacy (type-0). Uses `gasPrice`.
+   *  - txType 2 → EIP-1559. Requires `maxFeePerGas`, `maxPriorityFeePerGas`,
+   *    and `chainId`; rejects `gasPrice`.
+   */
   async signTransactionAsync(txParams: TxParams): Promise<string> {
-    const { gas, ...params } = txParams;
-    const txObj = {
-      ...params,
-      gasLimit: gas,
-    };
+    const txType = txParams.txType ?? 0;
+    if (txType !== 0 && txType !== 2) {
+      throw new Error(`signTransaction: unsupported txType ${txType} (supported: 0 legacy, 2 EIP-1559)`);
+    }
 
-    const tx = createTx(txObj);
-    const rawTx = txToHexString(tx);
+    const { gas, txType: _txType, ...params } = txParams;
     const signingAddress = stripHexPrefix(txParams.from);
+
+    let rawTx: string;
+    if (txType === 2) {
+      if (params.gasPrice !== undefined) {
+        throw new Error('signTransaction: gasPrice is not valid for txType 2 (use maxFeePerGas/maxPriorityFeePerGas)');
+      }
+      if (params.maxFeePerGas === undefined || params.maxPriorityFeePerGas === undefined) {
+        throw new Error('signTransaction: txType 2 requires maxFeePerGas and maxPriorityFeePerGas');
+      }
+      if (params.chainId === undefined) {
+        throw new Error('signTransaction: txType 2 requires chainId');
+      }
+      const txObj = { ...params, gasLimit: gas ?? params.gasLimit };
+      rawTx = txToHexString(create1559Tx(txObj as any));
+    } else {
+      const txObj = { ...params, gasLimit: gas };
+      rawTx = txToHexString(createTx(txObj));
+    }
 
     const password = await new Promise<string>((resolve, reject) => {
       this.passwordProvider((err, pw) => (err ? reject(err) : resolve(pw as string)));
     });
     const pwDerivedKey = await this.keyFromPasswordAsync(password);
-    const signedTx = signTx(this, pwDerivedKey, rawTx, signingAddress);
+
+    const signedTx =
+      txType === 2
+        ? (await import('./signing')).sign1559Tx(this, pwDerivedKey, rawTx, signingAddress)
+        : signTx(this, pwDerivedKey, rawTx, signingAddress);
 
     return addHexPrefix(signedTx);
   }

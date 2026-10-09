@@ -15,8 +15,11 @@
  * Returns {v, r, s} with r/s as Buffer to match the 4.0.0 signature shape
  * (tests call .toString() on them).
  */
-import { createLegacyTxFromRLP, type LegacyTx } from '@ethereumjs/tx';
+import { createLegacyTxFromRLP, createFeeMarket1559TxFromRLP, type LegacyTx } from '@ethereumjs/tx';
+import { RLP } from '@ethereumjs/rlp';
+import { bytesToBigInt } from '@ethereumjs/util';
 import { createCustomCommon, Hardfork, Mainnet } from '@ethereumjs/common';
+// (already imported for LEGACY_COMMON)
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { sign as viemSign, type SignParameters } from 'viem/accounts';
@@ -54,6 +57,30 @@ export function signTx(keystore: any, pwDerivedKey: Uint8Array, rawTx: string, s
 
   // 4.0.0 returns UNPREFIXED hex (keystore.signTransaction adds 0x itself).
   // noble bytesToHex is unprefixed already.
+  return bytesToHex(signed.serialize());
+}
+
+/**
+ * Sign an EIP-1559 (type-2) transaction (5.1.0, additive). The rawTx must be a
+ * type-2 RLP (from txutils.create1559Tx / valueTx1559 / functionTx1559). Its
+ * chainId (baked into type-2) drives EIP-155 replay protection.
+ */
+export function sign1559Tx(keystore: any, pwDerivedKey: Uint8Array, rawTx: string, signingAddress: string): string {
+  assertDerivedKey(keystore, pwDerivedKey);
+
+  let txHex = stripHex(rawTx);
+  if (txHex.length % 2 !== 0) txHex = '0' + txHex;
+  const txBytes = hexToBytes(txHex);
+  // Extract chainId from the RLP (type-2 layout: [chainId, nonce, ...]) so we
+  // can build a matching Common before parsing (the constructor validates it).
+  const rlpDecoded = (RLP.decode(txBytes.subarray(1)) as Uint8Array[]);
+  const chainId = Number(bytesToBigInt(rlpDecoded[0]));
+  const common = createCustomCommon({ chainId }, Mainnet, { hardfork: Hardfork.London });
+  const tx = createFeeMarket1559TxFromRLP(txBytes, { common });
+  const privateKey = getPrivateKeyHex(keystore, pwDerivedKey, signingAddress);
+
+  const signed = tx.sign(hexToBytes(stripHex(privateKey)));
+
   return bytesToHex(signed.serialize());
 }
 

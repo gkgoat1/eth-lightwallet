@@ -26,7 +26,15 @@ export interface SerializedKeystore {
   version: number;
 }
 
-/** Transaction parameters accepted by `KeyStore.signTransaction` (web3-style `gas`). */
+/**
+ * Transaction parameters accepted by `KeyStore.signTransaction` /
+ * `signTransactionAsync` (web3-style `gas`).
+ *
+ * Transaction type is EXPLICIT via `txType` (5.1.0, never inferred):
+ *  - `txType` omitted or `0` → legacy (type-0). Uses `gasPrice`.
+ *  - `txType: 2` → EIP-1559. Requires `maxFeePerGas`, `maxPriorityFeePerGas`,
+ *    `chainId`; `gasPrice` must not be set.
+ */
 export interface TxParams {
   from: string;
   to?: string;
@@ -37,6 +45,12 @@ export interface TxParams {
   value?: string | number;
   data?: string;
   chainId?: number;
+  /** Explicit tx type: 0 (legacy, default) or 2 (EIP-1559). */
+  txType?: 0 | 2;
+  /** EIP-1559 only (txType 2). */
+  maxFeePerGas?: string | number | bigint;
+  /** EIP-1559 only (txType 2). */
+  maxPriorityFeePerGas?: string | number | bigint;
 }
 
 /** An nacl.box-encrypted message (asymmetric encryption). */

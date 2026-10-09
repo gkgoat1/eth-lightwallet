@@ -15,6 +15,8 @@
  */
 import { createLegacyTx, type LegacyTx } from '@ethereumjs/tx';
 import { RLP } from '@ethereumjs/rlp';
+import { createFeeMarket1559Tx, type FeeMarket1559Tx } from '@ethereumjs/tx';
+import { createCustomCommon, Hardfork, Mainnet } from '@ethereumjs/common';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { keccak_256 } from '@noble/hashes/sha3.js';
 import { encodeAbiParameters, toFunctionSelector } from 'viem';
@@ -56,8 +58,62 @@ export function createTx(txObject: TxObject): LegacyTx {
   return createLegacyTx(txData as any);
 }
 
-export function txToHexString(tx: LegacyTx): string {
+export function txToHexString(tx: LegacyTx | FeeMarket1559Tx): string {
   return hexPref(bytesToHex(tx.serialize()));
+}
+
+// ---------------------------------------------------------------------------
+// EIP-1559 (type-2) — additive, opt-in. Legacy (type-0) path above unchanged.
+// ---------------------------------------------------------------------------
+
+export interface Tx1559Object {
+  from?: string;
+  to?: string;
+  maxFeePerGas: string | number | bigint;
+  maxPriorityFeePerGas: string | number | bigint;
+  gasLimit?: string | number | bigint;
+  nonce?: string | number | bigint;
+  value?: string | number | bigint;
+  data?: string;
+  /** REQUIRED for 1559 (EIP-155 replay protection is baked into type-2). */
+  chainId: number;
+}
+
+export function create1559Tx(txObject: Tx1559Object): FeeMarket1559Tx {
+  if (txObject.chainId === undefined) {
+    throw new Error('create1559Tx: chainId is required for EIP-1559 transactions');
+  }
+  // Type-2 requires a Common whose chainId matches the tx (EIP-155 is baked
+  // in). London hardfork is where 1559 activated.
+  const common = createCustomCommon({ chainId: Number(txObject.chainId) }, Mainnet, { hardfork: Hardfork.London });
+  const txData: Record<string, unknown> = { chainId: BigInt(txObject.chainId) };
+  if (txObject.from) txData.from = hexPref(txObject.from);
+  if (txObject.to) txData.to = hexPref(txObject.to);
+  txData.maxFeePerGas = BigInt(txObject.maxFeePerGas);
+  txData.maxPriorityFeePerGas = BigInt(txObject.maxPriorityFeePerGas);
+  if (txObject.gasLimit !== undefined && txObject.gasLimit !== '') txData.gasLimit = BigInt(txObject.gasLimit);
+  if (txObject.nonce !== undefined && txObject.nonce !== '') txData.nonce = BigInt(txObject.nonce);
+  if (txObject.value !== undefined && txObject.value !== '') txData.value = BigInt(txObject.value);
+  if (txObject.data) txData.data = hexPref(txObject.data);
+
+  return createFeeMarket1559Tx(txData as any, { common });
+}
+
+export function valueTx1559(txObject: Tx1559Object): string {
+  return txToHexString(create1559Tx(txObject));
+}
+
+export function functionTx1559(abi: any[], functionName: string, args: any[], txObject: Tx1559Object): string {
+  const types = _getTypesFromAbi(abi, functionName);
+  const txData = _encodeFunctionTxData(functionName, types, args);
+  return txToHexString(create1559Tx({ ...txObject, data: txData }));
+}
+
+export function createContractTx1559(fromAddress: string, txObject: Tx1559Object): { tx: string; addr: string } {
+  const tx = create1559Tx(txObject);
+  // CREATE address is sender+nonce regardless of tx type.
+  const contractAddress = createdContractAddress(fromAddress, Number(txObject.nonce));
+  return { tx: txToHexString(tx), addr: contractAddress };
 }
 
 export function _getTypesFromAbi(abi: any[], functionName: string): string[] {
