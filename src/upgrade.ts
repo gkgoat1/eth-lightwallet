@@ -153,3 +153,17 @@ export function upgradeOldSerialized(
     throw new Error('Keystore is not of correct version.');
   }
 }
+
+/** Canonical async form of upgradeOldSerialized (5.1.0). */
+export function upgradeOldSerializedAsync(oldSerialized: string, password: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    try {
+      upgradeOldSerialized(oldSerialized, password, (err, ser) =>
+        err ? reject(err) : resolve(ser as string),
+      );
+    } catch (e) {
+      // upgradeOldSerialized throws synchronously on an unknown version.
+      reject(e);
+    }
+  });
+}

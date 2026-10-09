@@ -63,41 +63,53 @@ export interface Signature {
   s: Buffer;
 }
 
+type SigCb = (err: unknown, sig?: Signature) => void;
+
+// Dual form: returns a Promise; if a trailing callback is supplied it is also
+// invoked (5.1.0 async-internals + callback-compat decision).
 export function signMsg(
   this: { signMsgHash: typeof signMsgHash },
   keystore: any,
   pwDerivedKey: Uint8Array,
   rawMsg: string,
   signingAddress: string,
+  callback?: SigCb,
 ): Promise<Signature> {
   assertDerivedKey(keystore, pwDerivedKey);
 
   // Util.keccak(string) hashes the UTF-8 bytes of the string.
   const msgHash = hexPref(bytesToHex(keccak_256(new TextEncoder().encode(rawMsg))));
 
-  return this.signMsgHash(keystore, pwDerivedKey, msgHash, signingAddress);
+  const p = this.signMsgHash(keystore, pwDerivedKey, msgHash, signingAddress);
+  if (callback) p.then((s) => callback(null, s), (e) => callback(e));
+  return p;
 }
 
-export async function signMsgHash(
+export function signMsgHash(
   keystore: any,
   pwDerivedKey: Uint8Array,
   msgHash: string,
   signingAddress: string,
+  callback?: SigCb,
 ): Promise<Signature> {
   assertDerivedKey(keystore, pwDerivedKey);
 
-  let mh = stripHex(msgHash);
-  if (mh.length % 2 !== 0) mh = '0' + mh;
-  const hashHex = hexPref(mh);
-  const privateKey = getPrivateKeyHex(keystore, pwDerivedKey, signingAddress);
+  const p = (async (): Promise<Signature> => {
+    let mh = stripHex(msgHash);
+    if (mh.length % 2 !== 0) mh = '0' + mh;
+    const hashHex = hexPref(mh);
+    const privateKey = getPrivateKeyHex(keystore, pwDerivedKey, signingAddress);
 
-  const sig = await viemSign({ hash: hashHex, privateKey } as SignParameters);
+    const sig = await viemSign({ hash: hashHex, privateKey } as SignParameters);
 
-  return {
-    v: Number(sig.v),
-    r: Buffer.from(stripHex(sig.r), 'hex'),
-    s: Buffer.from(stripHex(sig.s), 'hex'),
-  };
+    return {
+      v: Number(sig.v),
+      r: Buffer.from(stripHex(sig.r), 'hex'),
+      s: Buffer.from(stripHex(sig.s), 'hex'),
+    };
+  })();
+  if (callback) p.then((s) => callback(null, s), (e) => callback(e));
+  return p;
 }
 
 export function concatSig(signature: { v: number | bigint; r: Uint8Array; s: Uint8Array }): string {
@@ -108,14 +120,24 @@ export function concatSig(signature: { v: number | bigint; r: Uint8Array; s: Uin
   return hexPref(`${r}${s}${vHex}`);
 }
 
-export async function recoverAddress(rawMsg: string, v: number, r: Uint8Array, s: Uint8Array): Promise<Buffer> {
-  const msgHash = hexPref(bytesToHex(keccak_256(new TextEncoder().encode(rawMsg))));
-  const vHex = Number(v).toString(16).padStart(2, '0');
-  const signature = `${bytesToHex(leftPad32(r))}${bytesToHex(leftPad32(s))}${vHex}`;
+export function recoverAddress(
+  rawMsg: string,
+  v: number,
+  r: Uint8Array,
+  s: Uint8Array,
+  callback?: (err: unknown, address?: Buffer) => void,
+): Promise<Buffer> {
+  const p = (async (): Promise<Buffer> => {
+    const msgHash = hexPref(bytesToHex(keccak_256(new TextEncoder().encode(rawMsg))));
+    const vHex = Number(v).toString(16).padStart(2, '0');
+    const signature = `${bytesToHex(leftPad32(r))}${bytesToHex(leftPad32(s))}${vHex}`;
 
-  const address = await viemRecoverAddress({ hash: msgHash, signature: hexPref(signature) });
+    const address = await viemRecoverAddress({ hash: msgHash, signature: hexPref(signature) });
 
-  return Buffer.from(stripHex(address), 'hex');
+    return Buffer.from(stripHex(address), 'hex');
+  })();
+  if (callback) p.then((a) => callback(null, a), (e) => callback(e));
+  return p;
 }
 
 function leftPad32(b: Uint8Array): Uint8Array {

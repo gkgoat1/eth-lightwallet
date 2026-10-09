@@ -175,8 +175,17 @@ export class KeyStore {
     }
   }
 
+  /** Canonical async form. */
+  async keyFromPasswordAsync(password: string): Promise<Uint8Array> {
+    return KeyStore.deriveKeyFromPasswordAndSaltAsync(password, this.salt);
+  }
+
+  /** Callback wrapper (5.0.0 compat). */
   keyFromPassword(password: string, callback: (err: unknown, pwDerivedKey?: Uint8Array) => void): void {
-    KeyStore.deriveKeyFromPasswordAndSalt(password, this.salt, callback);
+    this.keyFromPasswordAsync(password).then(
+      (dk) => callback(null, dk),
+      (err) => callback(err),
+    );
   }
 
   passwordProvider(callback: (err: unknown, password?: string) => void): void {
@@ -187,6 +196,13 @@ export class KeyStore {
     callback(null, password as string);
   }
 
+  /** Canonical async form. Resolves false (not an error) when absent. */
+  async hasAddressAsync(address: string): Promise<boolean> {
+    const addrToCheck = stripHexPrefix(address);
+    return this.encPrivKeys[addrToCheck] !== undefined;
+  }
+
+  /** Callback wrapper (5.0.0 compat — preserves the err+false shape). */
   hasAddress(address: string, callback: (err: unknown, hasAddr?: boolean) => void): void {
     const addrToCheck = stripHexPrefix(address);
 
@@ -199,7 +215,8 @@ export class KeyStore {
     callback(null, true);
   }
 
-  signTransaction(txParams: TxParams, callback: (err: unknown, signedTx?: string) => void): void {
+  /** Canonical async form (legacy tx path; EIP-1559 lands in Phase 2). */
+  async signTransactionAsync(txParams: TxParams): Promise<string> {
     const { gas, ...params } = txParams;
     const txObj = {
       ...params,
@@ -210,23 +227,21 @@ export class KeyStore {
     const rawTx = txToHexString(tx);
     const signingAddress = stripHexPrefix(txParams.from);
 
-    this.passwordProvider((err, password) => {
-      if (err) {
-        callback(err);
-        return;
-      }
-
-      this.keyFromPassword(password as string, (err, pwDerivedKey) => {
-        if (err) {
-          callback(err);
-          return;
-        }
-
-        const signedTx = signTx(this, pwDerivedKey as Uint8Array, rawTx, signingAddress);
-
-        callback(null, addHexPrefix(signedTx));
-      });
+    const password = await new Promise<string>((resolve, reject) => {
+      this.passwordProvider((err, pw) => (err ? reject(err) : resolve(pw as string)));
     });
+    const pwDerivedKey = await this.keyFromPasswordAsync(password);
+    const signedTx = signTx(this, pwDerivedKey, rawTx, signingAddress);
+
+    return addHexPrefix(signedTx);
+  }
+
+  /** Callback wrapper (5.0.0 compat). */
+  signTransaction(txParams: TxParams, callback: (err: unknown, signedTx?: string) => void): void {
+    this.signTransactionAsync(txParams).then(
+      (tx) => callback(null, tx),
+      (err) => callback(err),
+    );
   }
 
   _generatePrivKeys(pwDerivedKey: Uint8Array, n: number): { privKey: string; encPrivKey: EncryptedKeyBlob }[] {
@@ -272,42 +287,43 @@ export class KeyStore {
     return keys;
   }
 
-  static createVault(
-    opts: CreateVaultOptions,
-    cb: (err: unknown, ks?: KeyStore) => void,
-  ): void {
+  /** Canonical async form. */
+  static async createVaultAsync(opts: CreateVaultOptions): Promise<KeyStore> {
     const { hdPathString, seedPhrase, password } = opts;
     let salt = opts.salt;
 
     // Default hdPathString
     if (!hdPathString) {
-      const err = new Error(
+      throw new Error(
         "Keystore: Must include hdPathString in createVault inputs. Suggested alternatives are m/0'/0'/0' for previous lightwallet default, or m/44'/60'/0'/0 for BIP44 (used by Jaxx & MetaMask)",
       );
-      return cb(err);
     }
 
     if (!seedPhrase) {
-      const err = new Error('Keystore: Must include seedPhrase in createVault inputs.');
-      return cb(err);
+      throw new Error('Keystore: Must include seedPhrase in createVault inputs.');
     }
 
     if (!salt) {
       salt = KeyStore.generateSalt(32);
     }
 
-    KeyStore.deriveKeyFromPasswordAndSalt(password, salt, (err, pwDerivedKey) => {
-      if (err) {
-        cb(err);
-        return;
-      }
+    const pwDerivedKey = await KeyStore.deriveKeyFromPasswordAndSaltAsync(password, salt);
 
-      const ks = new KeyStore();
+    const ks = new KeyStore();
+    ks.init(seedPhrase, pwDerivedKey, hdPathString, salt);
 
-      ks.init(seedPhrase as string, pwDerivedKey as Uint8Array, hdPathString as string, salt as string);
+    return ks;
+  }
 
-      cb(null, ks);
-    });
+  /** Callback wrapper (5.0.0 compat). */
+  static createVault(
+    opts: CreateVaultOptions,
+    cb: (err: unknown, ks?: KeyStore) => void,
+  ): void {
+    KeyStore.createVaultAsync(opts).then(
+      (ks) => cb(null, ks),
+      (err) => cb(err),
+    );
   }
 
   static generateSalt(byteCount?: number): string {
@@ -367,6 +383,24 @@ export class KeyStore {
     return ks;
   }
 
+  /**
+   * Canonical async form. Salt defaults to DEFAULT_SALT when omitted.
+   * Yields to the event loop before the (sync, blocking) scrypt to preserve
+   * the non-blocking contract scrypt-async provided.
+   */
+  static async deriveKeyFromPasswordAndSaltAsync(password: string, salt?: string): Promise<Uint8Array> {
+    const useSalt = salt || KeyStore.DEFAULT_SALT;
+
+    const N = 2 ** 14; // logN = 14
+    const r = 8;
+    const p = 1;
+    const dkLen = 32;
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return scrypt(password, useSalt, { N, r, p, dkLen });
+  }
+
+  /** Callback wrapper (5.0.0 compat — salt optional, defaults to DEFAULT_SALT). */
   static deriveKeyFromPasswordAndSalt(
     password: string,
     salt: string | ((err: unknown, derivedKey?: Uint8Array) => void),
@@ -381,26 +415,11 @@ export class KeyStore {
       salt = KeyStore.DEFAULT_SALT;
     }
 
-    const N = 2 ** 14; // logN = 14
-    const r = 8;
-    const p = 1;
-    const dkLen = 32;
-
-    // @noble/hashes scrypt is byte-identical to scrypt-async at these params
-    // (golden-pinned). Async via setTimeout to preserve the non-blocking
-    // contract scrypt-async provided (interruptStep yielded to the event loop).
-    setTimeout(() => {
-      let err: unknown = null;
-      let ui8arr: Uint8Array | undefined;
-
-      try {
-        ui8arr = scrypt(password, salt as string, { N, r, p, dkLen });
-      } catch (e) {
-        err = e;
-      }
-
-      (callback as (err: unknown, derivedKey?: Uint8Array) => void)(err, ui8arr);
-    }, 0);
+    const cb = callback as (err: unknown, derivedKey?: Uint8Array) => void;
+    KeyStore.deriveKeyFromPasswordAndSaltAsync(password, salt as string).then(
+      (dk) => cb(null, dk),
+      (err) => cb(err),
+    );
   }
 
   static _encryptString(string: string, pwDerivedKey: Uint8Array): EncryptedStringBlob {
