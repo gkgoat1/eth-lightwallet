@@ -1,6 +1,6 @@
 # Release Notes #
 
-## Version 5.1.0 - Unreleased ##
+## Version 5.1.0 - 2026-10-08 ##
 
 Backwards-compatible feature release. **No existing API removed or changed in
 behavior** — all additions are opt-in. Every 5.0.0 golden, comparison, and
